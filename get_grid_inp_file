@@ -18,10 +18,10 @@ def main():
     gridlist = ('gx37', 'gx16')
     varargin = sys.argv
     narg = len(varargin)
-    gridtype = varargin[1]
     if narg > 2:
         raise ValueError('Require 1 argument, got {}.'.format(narg-1))
-    elif gridtype not in gridlist:
+    gridtype = varargin[1]
+    if gridtype not in gridlist:
         raise ValueError('Input grid type {} not supported'.format(gridtype))
 
     # read data

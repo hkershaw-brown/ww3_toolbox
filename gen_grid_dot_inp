@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+# This script generate ww3_grid.inp
+#
+#  Qing Li, 20170305
+
+import sys
+
+def main():
+    """
+    """
+    # check input
+    gridlist = ('gx37', 'gx16')
+    varargin = sys.argv
+    narg = len(varargin)
+    if narg != 2:
+        raise ValueError('Require 1 argument, got {}.'.format(narg-1))
+    gridtype = varargin[1]
+    if gridtype not in gridlist:
+        raise ValueError('Input grid type {} not supported'.format(gridtype))
+
+    # write to file
+    inppath = './grids_inp'
+    ofilename = inppath+'/'+'ww3_grid.inp.'+gridtype
+    outfile = open(ofilename, 'w')
+    write_start(outfile)
+    write_end(outfile)
+
+def write_blank(outfile):
+    """
+    Write a blank line start with '$' to file
+    """
+    outfile.write('$\n')
+
+def write_line(outfile):
+    """
+    Write a line '$ ---- $' to file
+    """
+    line_str = '$ -------------------------------------------------------------------- $\n'
+    outfile.write(line_str)
+
+def write_start(outfile):
+    """
+    Write start string to file
+    """
+    write_line(outfile)
+    start_str = '$ WAVEWATCH III Grid preprocessor input file                           $\n'
+    outfile.write(start_str)
+    write_line(outfile)
+    write_blank(outfile)
+
+def write_end(outfile):
+    """
+    Write start string to file
+    """
+    write_blank(outfile)
+    write_line(outfile)
+    end_str = '$ End of input file                                                    $\n'
+    outfile.write(end_str)
+    write_line(outfile)
+
+if __name__ == "__main__":
+    main()
