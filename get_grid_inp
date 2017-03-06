@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+# This script generate the x-coord, y-coord and bottom depth files
+# for ww3_grid.inp
+#
+#  Qing Li, 20170305
+
+import sys
+import numpy as np
+from netCDF4 import Dataset
+from astropy.io import ascii
+
+def main():
+    """
+    Read xxx.grid.nc, and save the x-coord, y-coord
+        and bottom depth to txt files for ww3_grid.inp
+    """
+    # check input
+    gridlist = ('gx37', 'gx16')
+    varargin = sys.argv
+    narg = len(varargin)
+    gridtype = varargin[1]
+    if narg > 2:
+        raise ValueError('Require 1 argument, got {}.'.format(narg-1))
+    elif gridtype not in gridlist:
+        raise ValueError('Input grid type {} not supported'.format(gridtype))
+
+    # read data
+    gridpath = './grids'
+    inppath = './grids_inp'
+    infile = gridpath+'/'+gridtype+'.grids.nc'
+    ncfile = Dataset(infile,'r')
+    nlat = ncfile.dimensions['nlat'].size
+    nlon = ncfile.dimensions['nlon'].size
+    print('----')
+    print('Grid: {}, (nx, ny) = ({}, {})'.format(gridtype, nlon, nlat))
+    print('Input file: {}'.format(infile))
+
+    # save x-coord, y-coord, bottom
+    save_var(ncfile, 'TLONG', inppath+'/'+gridtype+'_x.inp')
+    save_var(ncfile, 'TLAT',  inppath+'/'+gridtype+'_y.inp')
+    save_var(ncfile, 'HT',    inppath+'/'+gridtype+'_bottom.inp', 0.01)
+    save_var(ncfile, 'REGION_MASK', inppath+'/'+gridtype+'_mapsta.inp', 0)
+    print('----')
+
+def save_var(ncfile, varname, outfile, fscale=1):
+    """
+    Read in variable 'varname' from file 'ncfile' and write it in
+        txt file 'outfile'
+        fscale is optional: 0 - set non zero values in dat to 1
+                            1 - do nothing
+                            otherwise - set dat to dat * fscale
+    """
+    nlat = ncfile.dimensions['nlat'].size
+    nlon = ncfile.dimensions['nlon'].size
+    dat = ncfile.variables[varname][:]
+    if fscale == 0:
+        dat = np.where(dat != 0, 1, 0)
+    elif fscale != 1:
+        dat = dat * fscale
+
+    datasize = dat.shape
+    if len(datasize) != 2:
+        raise ValueError('Dimension of data should be 2')
+    else:
+        ndatx = dat.shape[1]
+        ndaty = dat.shape[0]
+        if ndatx == nlon and ndaty == nlat:
+            write_inp(dat, outfile)
+        elif ndatx == nlat and ndaty == nlon:
+            write_inp(dat.transpose(), outfile)
+        else:
+            raise ValueError('Dimensions not match')
+
+def write_inp(dat, outfile):
+    """
+    Write out data in a txt file.
+        dat: 2 dimensional array of data
+        outfile: output filename
+    """
+    print('Output file: {}'.format(outfile))
+    ascii.write(dat, outfile, format='no_header', overwrite=True)
+
+if __name__ == "__main__":
+    main()
