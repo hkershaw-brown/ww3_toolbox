@@ -4,12 +4,18 @@
 #  Qing Li, 20170305
 
 import sys
+import os
 
 def main():
     """
     """
     # check input
     gridlist = ('gx37', 'gx16')
+    gstrg = {'gx37': 'CURV', 'gx16': 'CURV'}
+    flagll = {'gx37': 'T', 'gx16': 'T'}
+    cstrg = {'gx37': 'SMPL', 'gx16': 'SMPL'}
+    nx = {'gx37': 100, 'gx16': 320}
+    ny = {'gx37': 116, 'gx16': 384}
     varargin = sys.argv
     narg = len(varargin)
     if narg != 2:
@@ -21,13 +27,17 @@ def main():
     # write to file
     inppath = './grids_inp'
     ofilename = inppath+'/'+'ww3_grid.inp.'+gridtype
+    nmlfile = 'ww3_grid_namelist.inp'
     outfile = open(ofilename, 'w')
     write_start(outfile)
     write_gridname(outfile, gridtype)
     write_frequency(outfile, 1.1, 0.04118, 25, 24, 0)
     write_flag(outfile, 'F', 'T', 'T', 'T', 'F', 'T')
     write_timestep(outfile, 1800, 1800, 1800, 300)
+    write_namelist(outfile)
+    write_grid(outfile, gstrg[gridtype], flagll[gridtype], cstrg[gridtype], nx[gridtype], ny[gridtype])
     write_end(outfile)
+    outfile.close()
 
 def write_blank(outfile):
     """
@@ -113,6 +123,37 @@ def write_timestep(outfile, maxg, maxcflxy, maxcflkth, minsou):
     tstep_str = ' {:8.2f} {:8.2f} {:8.2f} {:8.2f}\n'.format(maxg, maxcflxy, maxcflkth, minsou)
     outfile.write(tstep_str)
     write_blank(outfile)
+
+def write_namelist(outfile, *arg):
+    """
+    Write namelist to file
+    """
+    if len(arg) == 1:
+        nmlfile = arg
+        if os.path.isfile(nmlfile):
+            for line in open(nmlfile, 'r'):
+                outfile.write(line)
+        else:
+            print('Namelist file {} does not exist.\n'.format(nmlfile))
+            sys.exit(1)
+    else:
+        nml_cmt = '$ Start of namelist input section ------------------------------------ $\n' \
+                + '$\n' \
+                + 'END OF NAMELISTS\n' \
+                + '$\n'
+        outfile.write(nml_cmt)
+
+def write_grid(outfile, gstrg, flagll, cstrg, nx, ny):
+    """
+    Write grid information to file
+    """
+    grid_cmt = '$ Define grid -------------------------------------------------------- $\n'
+    outfile.write(grid_cmt)
+    write_blank(outfile)
+    grid_str1 = '  \'{}\'  {}  \'{}\'\n'.format(gstrg, flagll, cstrg)
+    outfile.write(grid_str1)
+    grid_str2 = '  {}  {}\n'.format(nx, ny)
+    outfile.write(grid_str2)
 
 
 if __name__ == "__main__":
