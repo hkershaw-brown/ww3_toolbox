@@ -23,6 +23,10 @@ def main():
     ofilename = inppath+'/'+'ww3_grid.inp.'+gridtype
     outfile = open(ofilename, 'w')
     write_start(outfile)
+    write_gridname(outfile, gridtype)
+    write_frequency(outfile, 1.1, 0.04118, 25, 24, 0)
+    write_flag(outfile, 'F', 'T', 'T', 'T', 'F', 'T')
+    write_timestep(outfile, 1800, 1800, 1800, 300)
     write_end(outfile)
 
 def write_blank(outfile):
@@ -57,6 +61,59 @@ def write_end(outfile):
     end_str = '$ End of input file                                                    $\n'
     outfile.write(end_str)
     write_line(outfile)
+
+def write_gridname(outfile, gridname):
+    """
+    Write grid name to file
+    """
+    gname_cmt = '$ Grid name (C*30, in quotes)\n'
+    outfile.write(gname_cmt)
+    gname_str = '  \'{:30s}\'\n'.format(gridname)
+    write_blank(outfile)
+    outfile.write(gname_str)
+    write_blank(outfile)
+
+def write_frequency(outfile, icf, ifreq, nf, nd, offset):
+    """
+    Write frequncy to file
+    """
+    freq_cmt = '$ Frequency increment factor and first frequency (Hz) ---------------- $\n' \
+             + '$ number of frequencies (wavenumbers) and directions, relative offset\n' \
+             + '$ of first direction in terms of the directional increment [-0.5,0.5].\n'
+    outfile.write(freq_cmt)
+    write_blank(outfile)
+    freq_str = ' {:4.1f} {:8.5f} {:3d} {:3d} {:4.1f}\n'.format(icf, ifreq, nf, nd, offset)
+    outfile.write(freq_str)
+    write_blank(outfile)
+
+def write_flag(outfile, fldry, flcx, flcy, flcth, flck, flsou):
+    """
+    Write model flags to file
+    """
+    flag_cmt = '$ Set model flags ---------------------------------------------------- $\n' \
+             + '$  - FLDRY         Dry run (input/output only, no calculation).\n' \
+             + '$  - FLCX, FLCY    Activate X and Y component of propagation.\n' \
+             + '$  - FLCTH, FLCK   Activate direction and wavenumber shifts.\n' \
+             + '$  - FLSOU         Activate source terms.\n'
+    outfile.write(flag_cmt)
+    flag_str = '  {:2s} {:2s} {:2s} {:2s} {:2s} {:2s}\n'.format(fldry, flcx, flcy, flcth, flck, flsou)
+    outfile.write(flag_str)
+    write_blank(outfile)
+
+def write_timestep(outfile, maxg, maxcflxy, maxcflkth, minsou):
+    """
+    Write time step to file
+    """
+    tstep_cmt = '$ Set time steps ----------------------------------------------------- $\n' \
+              + '$ - Time step information (this information is always read)\n' \
+              + '$     maximum global time step, maximum CFL time step for x-y and\n' \
+              + '$     k-theta, minimum source term time step (all in seconds).\n'
+    outfile.write(tstep_cmt)
+    write_blank(outfile)
+    tstep_str = ' {:8.2f} {:8.2f} {:8.2f} {:8.2f}\n'.format(maxg, maxcflxy, maxcflkth, minsou)
+    outfile.write(tstep_str)
+    write_blank(outfile)
+
 
 if __name__ == "__main__":
     main()
