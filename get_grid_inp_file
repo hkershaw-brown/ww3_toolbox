@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# This script generate the x-coord, y-coord and bottom depth files
+# This script generates the x-coord, y-coord and bottom depth files
 # for ww3_grid.inp
 #
 #  Qing Li, 20170305

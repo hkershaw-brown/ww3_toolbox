@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+# This script generates netCDF input field files for
+# ww3_prnc.inp
+# 
+#  Qing Li, 20170609
+
+import sys
+import numpy as np
+from netCDF4 import Dataset
