@@ -41,6 +41,7 @@ def main():
     save_var(ncfile, 'HT',    inppath+'/'+gridtype+'_bottom.inp', 0.01)
     save_var(ncfile, 'REGION_MASK', inppath+'/'+gridtype+'_mapsta.inp', 0)
     print('----')
+    ncfile.close()
 
 def save_var(ncfile, varname, outfile, fscale=1):
     """
