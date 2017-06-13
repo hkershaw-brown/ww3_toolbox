@@ -58,7 +58,7 @@ if [ "${gridtype}" == "gx37" ]; then
 	ny=116
 elif [ "${gridtype}" == "gx16" ]; then
 	nx=320
-	ny=386
+	ny=384
 else
 	echo "Grid type ${gridtype} not supported"
 	exit 1
