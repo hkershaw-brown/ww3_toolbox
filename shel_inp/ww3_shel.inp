@@ -5,18 +5,18 @@ $ Define input to be used with F/T/C flag for use or nor or coupling and
 $ T/F flag for definition as a homogeneous field.
 $
 $ Include ice and mud parameters only if IC1/2/3/4 used :
-   F F     Ice parameter 1
-   F F     Ice parameter 2
-   F F     Ice parameter 3
-   F F     Ice parameter 4
-   F F     Ice parameter 5
-   F F     Mud parameter 1
-   F F     Mud parameter 2
-   F F     Mud parameter 3
+$   F F     Ice parameter 1
+$   F F     Ice parameter 2
+$   F F     Ice parameter 3
+$   F F     Ice parameter 4
+$   F F     Ice parameter 5
+$   F F     Mud parameter 1
+$   F F     Mud parameter 2
+$   F F     Mud parameter 3
    F F     Water levels
    F F     Currents
    T F     Winds
-   T       Ice concentrations
+   T F     Ice concentrations
    F       Assimilation data : Mean parameters
    F       Assimilation data : 1-D spectra
    F       Assimilation data : 2-D spectra
@@ -63,7 +63,7 @@ $          the total number and order of the logical flags is fixed.
 $                               The raw data file is out_grd.ww3, 
 $                               see w3iogo.ftn for additional doc.
 $
-   20090101 000000   3600  20090101 000000
+   20090101 000000   3600  20090106 000000
 $----------------------------------------------------------------
 $ Output request flags identifying fields.
 $ 
@@ -256,7 +256,7 @@ $ DTD FC  CFX CFD CFK
 $ (10) User defined (NOEXTR flags needed)
   F
 $  U1  U2
-$ T   T
+$ F   F
 $
 $----------------------------------------------------------------
 $
@@ -277,14 +277,14 @@ $          difficult to use point names in data files.
 $
    20090101 000000    0  20090106 000000
 $
-    -0.25 -0.25 'Land      '
-     0.0   0.0  'Point_1   '
-     2.0   1.0  'Point_2   '
-     1.8   2.2  'Point_3   '
-     2.1   0.9  'Point_4   '
-     5.0   5.0  'Outside   '
+$    -0.25 -0.25 'Land      '
+$     0.0   0.0  'Point_1   '
+$     2.0   1.0  'Point_2   '
+$     1.8   2.2  'Point_3   '
+$     2.1   0.9  'Point_4   '
+$     5.0   5.0  'Outside   '
 $
-     0.0   0.0  'STOPSTRING'
+$     0.0   0.0  'STOPSTRING'
 $
 $ Type 3 : Output along track.
 $          Flag for formatted input file.
@@ -292,13 +292,13 @@ $                         The data files are track_i.ww3 and
 $                         track_o.ww3, see w3iotr.ftn for ad. doc.
 $
    20090101 000000   0  20090106 000000
-     F
+$     F
 $
 $ Type 4 : Restart files (no additional data required).
 $                               The data file is restartN.ww3, see
 $                               w3iors.ftn for additional doc.
 $
-   20090101 030000  3600  20090106 000000
+   20090101 000000  3600  20090106 000000
 $
 $ Type 5 : Boundary data (no additional data required).
 $                               The data file is nestN.ww3, see
@@ -309,8 +309,8 @@ $
 $ Type 6 : Separated wave field data (dummy for now).
 $          First, last step IX and IY, flag for formatted file
 $
-   19680606 000000   3600  20010102 000000
-      0 999 1 0 999 1 T
+   20090101 000000   0  20090106 000000
+$      0 999 1 0 999 1 T
 $
 $ Type 7 : Coupling. (must be fully commented if not used with switch COU)
 $          Namelist type selection is used here.
