@@ -25,8 +25,10 @@ $ Time frame of calculations ----------------------------------------- $
 $ - Starting time in yyyymmdd hhmmss format.
 $ - Ending time in yyyymmdd hhmmss format.
 $
-   20090101 000000
-   20090102 000000
+$   20090101 000000
+$   20090102 000000
+   LB_STARTING_TIME
+   LB_ENDING_TIME
 $
 $ Define output data ------------------------------------------------- $
 $
@@ -63,7 +65,8 @@ $          the total number and order of the logical flags is fixed.
 $                               The raw data file is out_grd.ww3, 
 $                               see w3iogo.ftn for additional doc.
 $
-   20090101 000000   3600  20090102 000000
+$   20090101 000000   3600  20090102 000000
+   LB_STARTING_TIME  LB_TIME_INT  LB_ENDING_TIME
 $----------------------------------------------------------------
 $ Output request flags identifying fields.
 $ 
@@ -230,9 +233,9 @@ $ (3) Frequency-dependent parameters
 $ EF TH1M STH1M TH2M STH2M WN
   T   T   T   F   F   F
 $ (4) Spectral Partition Parameters
-  T
+  F
 $ PHS PTP PLP PDIR PSPR PWS TWS PNR
-  T   T   T   T   T   T   T   T
+$  T   T   T   T   T   T   T   T
 $ (5) Atmosphere-waves layer
   T
 $ UST CHA CGE FAW TAW TWA WCC WCF WCH WCM
@@ -242,13 +245,13 @@ $ (6) Wave-Ocean layer
 $ SXY TWO BHD FOC TUS USS P2S USF P2L TWI FIC
   T   T   T   T   T   T   T   F   F   F   F
 $ (7) Wave-bottom layer
-  T
+  F
 $ ABR UBR BED FBB TBB
-  T   T   T   T   T
+$  T   T   T   T   T
 $ (8) Spectrum parameters
-  T
+  F
 $ MSS MSC WL02 AXT AYT AXY
-  T   T   T   T   T   T
+$  T   T   T   T   T   T
 $ (9) Numerical diagnostics
   T
 $ DTD FC  CFX CFD CFK
@@ -275,7 +278,7 @@ $          advised, because it will break the GrADS utility to
 $          plots spectra and source terms, and will make it more
 $          difficult to use point names in data files.
 $
-   20090101 000000    0  20090106 000000
+   LB_STARTING_TIME    0  LB_ENDING_TIME
 $
 $    -0.25 -0.25 'Land      '
 $     0.0   0.0  'Point_1   '
@@ -291,25 +294,26 @@ $          Flag for formatted input file.
 $                         The data files are track_i.ww3 and
 $                         track_o.ww3, see w3iotr.ftn for ad. doc.
 $
-   20090101 000000   0  20090106 000000
+   LB_STARTING_TIME   0  LB_ENDING_TIME
 $     F
 $
 $ Type 4 : Restart files (no additional data required).
 $                               The data file is restartN.ww3, see
 $                               w3iors.ftn for additional doc.
 $
-   20090101 000000  21600  20090102 000000
+$   20090101 000000   3600  20090102 000000
+   LB_STARTING_TIME  LB_TIME_RES  LB_ENDING_TIME
 $
 $ Type 5 : Boundary data (no additional data required).
 $                               The data file is nestN.ww3, see
 $                               w3iobcmd.ftn for additional doc.
 $
-   20090101 000000   0  20090106 000000
+   LB_STARTING_TIME   0  LB_ENDING_TIME
 $
 $ Type 6 : Separated wave field data (dummy for now).
 $          First, last step IX and IY, flag for formatted file
 $
-   20090101 000000   0  20090106 000000
+   LB_STARTING_TIME   0  LB_ENDING_TIME
 $      0 999 1 0 999 1 T
 $
 $ Type 7 : Coupling. (must be fully commented if not used with switch COU)

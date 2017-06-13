@@ -11,14 +11,22 @@
 gridtype="gx37"  # grid type: gx16 or gx37
 casename="test_ser_${gridtype}"
 
+# run times
+t_beg="20090101 000000"  # first output
+t_end="20090102 000000"  # last output
+dt="3600"                # output interval
+dtrs="21600"             # restart interval
+
 # run ww3 in MPI mode
 f_mpi="no"
 # number of processors
 nproc=4
+# wall time (hh:mm)
+walltime="0:15"
 
 # Set switch
-case_switch_ser="F90 NOGRB NOPA LRB4 SHRD PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14"
-case_switch_mpi="F90 NOGRB NOPA LRB4 MPI DIST NC4 PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14"
+case_switch_ser="F90 NOGRB NOPA LRB4 SHRD PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14 NC4"
+case_switch_mpi="F90 NOGRB NOPA LRB4 MPI DIST NC4 PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14 NC4"
 
 # specify compiler string (as per in ww3_dir/bin options) here:
 compstr="Intel"
@@ -32,6 +40,29 @@ toolbox_dir="/glade/u/home/qingli/src/ww3_toolbox"
 export WWATCH3_NETCDF="NC4"
 export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
 export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
+
+## 0. Preprocessing
+# calculate the output file number
+#y_beg=${t_beg:0:4}
+#y_end=${t_end:0:4}
+#m_beg=${t_beg:4:2}
+#m_end=${t_end:4:2}
+#d_beg=${t_beg:6:2}
+#d_end=${t_end:6:2}
+#nday=$((${y_end}))
+nday=1
+nfile=$((${nday}*86400/${dt}))
+# spatial dimensions
+if [ "${gridtype}" == "gx37" ]; then
+	nx=100
+	ny=116
+elif [ "${gridtype}" == "gx16" ]; then
+	nx=320
+	ny=386
+else
+	echo "Grid type ${gridtype} not supported"
+	exit 1
+fi
 
 # set path
 path_e="${ww3_dir}/exe"          # path for executables
@@ -141,8 +172,40 @@ fi
 ${path_b}/w3_make ww3_shel
 
 path_shel="${toolbox_dir}/shel_inp"
-cp ${path_shel}/ww3_shel.inp ./
+cp ${path_shel}/ww3_shel.inp ./ww3_shel.inp.tmp0
+`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_shel.inp.tmp0 > ww3_shel.inp.tmp1`
+`sed "s/LB_ENDING_TIME/${t_end}/g" ww3_shel.inp.tmp1 > ww3_shel.inp.tmp2`
+`sed "s/LB_TIME_INT/${dt}/g" ww3_shel.inp.tmp2 > ww3_shel.inp.tmp3`
+`sed "s/LB_TIME_RES/${dtrs}/g" ww3_shel.inp.tmp3 > ww3_shel.inp`
+rm ww3_shel.inp.tmp?
 mkdir -p shel_inp
+
+## 5. Gridded NetCDF output post-processor ------------------------------------
+echo " "
+echo " +--------------------------------------+"
+echo " | Gridded NetCDF output post-processor |"
+echo " +--------------------------------------+"
+echo " "
+
+# compile appropriate code
+echo ${case_switch_ser} > ${path_b}/switch
+${path_b}/w3_make ww3_ounf
+path_ounf="${toolbox_dir}/ounf_inp"
+cp ${path_ounf}/ww3_ounf.inp ./ww3_ounf.inp.tmp0
+`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_ounf.inp.tmp0 > ww3_ounf.inp.tmp1`
+`sed "s/LB_TIME_INT/${dt}/g" ww3_ounf.inp.tmp1 > ww3_ounf.inp.tmp2`
+`sed "s/LB_NFILE/${nfile}/g" ww3_ounf.inp.tmp2 > ww3_ounf.inp.tmp3`
+`sed "s/LB_NX/${nx}/g" ww3_ounf.inp.tmp3 > ww3_ounf.inp.tmp4`
+`sed "s/LB_NY/${ny}/g" ww3_ounf.inp.tmp4 > ww3_ounf.inp`
+rm ww3_ounf.inp.tmp?
+mkdir -p ounf_inp
+
+## 6. Submitting job ----------------------------------------------------------
+echo " "
+echo " +----------------+"
+echo " | Submitting job |"
+echo " +----------------+"
+echo " "
 
 if [ "${f_mpi}" == "yes" ]; then
 	echo "  Running WW3 with ${nproc} processors..."
@@ -152,7 +215,7 @@ cat > submit.sh << EOF
 #BSUB -q small
 #BSUB -R "span[ptile=15]"
 #BSUB -N
-#BSUB -W 0:15
+#BSUB -W ${walltime}
 #BSUB -x
 #BSUB -J ${casename}
 #BSUB -e ${casename}.err
@@ -164,6 +227,9 @@ mpirun -np ${nproc} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
 echo "  Log files routed to ${path_o}"
 mv log.* ${path_o}/
 mv ww3_shel.inp shel_inp/
+
+${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
+mv ww3_ounf.inp ounf_inp/
 
 EOF
 	chmod 755 submit.sh
@@ -177,7 +243,7 @@ cat > submit.sh << EOF
 #BSUB -q small
 #BSUB -R "span[ptile=15]"
 #BSUB -N
-#BSUB -W 0:15
+#BSUB -W ${walltime}
 #BSUB -x
 #BSUB -J ${casename}
 #BSUB -e ${casename}.err
@@ -189,6 +255,9 @@ ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
 echo "  Log files routed to ${path_o}"
 mv log.* ${path_o}/
 mv ww3_shel.inp shel_inp/
+
+${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
+mv ww3_ounf.inp ounf_inp/
 
 EOF
 	chmod 755 submit.sh
