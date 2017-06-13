@@ -26,7 +26,7 @@ $ - Starting time in yyyymmdd hhmmss format.
 $ - Ending time in yyyymmdd hhmmss format.
 $
    20090101 000000
-   20090106 000000
+   20090102 000000
 $
 $ Define output data ------------------------------------------------- $
 $
@@ -63,7 +63,7 @@ $          the total number and order of the logical flags is fixed.
 $                               The raw data file is out_grd.ww3, 
 $                               see w3iogo.ftn for additional doc.
 $
-   20090101 000000   3600  20090106 000000
+   20090101 000000   3600  20090102 000000
 $----------------------------------------------------------------
 $ Output request flags identifying fields.
 $ 
@@ -298,7 +298,7 @@ $ Type 4 : Restart files (no additional data required).
 $                               The data file is restartN.ww3, see
 $                               w3iors.ftn for additional doc.
 $
-   20090101 000000  3600  20090106 000000
+   20090101 000000  21600  20090102 000000
 $
 $ Type 5 : Boundary data (no additional data required).
 $                               The data file is nestN.ww3, see

@@ -26,7 +26,7 @@ def main():
 
     # read data
     gridpath = './grids'
-    inppath = './grids_inp'
+    inppath = './grid_inp'
     infile = gridpath+'/'+gridtype+'.grids.nc'
     ncfile = Dataset(infile,'r')
     nlat = ncfile.dimensions['nlat'].size

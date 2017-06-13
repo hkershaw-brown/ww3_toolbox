@@ -23,8 +23,10 @@ def main():
 
     # output time in days
     nday = 5
-    ind_wind = nday*4
-    ind_ice = nday
+    ind0_wind = 0
+    ind0_ice = 0
+    ind1_wind = nday*4
+    ind1_ice = nday
 
     ##########################
     # output file 1: wind.nc
@@ -51,7 +53,7 @@ def main():
     vtime.long_name = time.long_name
     vtime.units = time.units
     vtime.calendar = 'gregorian'
-    vtime[:] = time[0:ind_wind]
+    vtime[:] = time[ind0_wind:ind1_wind]
     # longitude
     vlon = fout_wind.createVariable('lon', 'f4', ('lon',), zlib=True)
     vlon.long_name = lon.long_name
@@ -66,12 +68,12 @@ def main():
     vu10 = fout_wind.createVariable('u_10', 'f4', ('time', 'lat', 'lon'), zlib=True)
     vu10.long_name = u10.long_name
     vu10.units = u10.units
-    vu10[:] = u10[0:ind_wind,:,:]
+    vu10[:] = u10[ind0_wind:ind1_wind,:,:]
     # v10
     vv10 = fout_wind.createVariable('v_10', 'f4', ('time', 'lat', 'lon'), zlib=True)
     vv10.long_name = v10.long_name
     vv10.units = v10.units
-    vv10[:] = v10[0:ind_wind,:,:]
+    vv10[:] = v10[ind0_wind:ind1_wind,:,:]
     # global attributes
     fout_wind.note = '{} days 10-meter wind from {} and {}.\n'.format(nday, fname_u10, fname_v10)
     # close files
@@ -102,7 +104,7 @@ def main():
     vtime.long_name = time.long_name
     vtime.units = time.units
     vtime.calendar = 'gregorian'
-    vtime[:] = time[0:ind_ice]
+    vtime[:] = time[ind0_ice:ind1_ice]
     # longitude
     vlon = fout_ice.createVariable('lon', 'f4', ('lon',), zlib=True)
     vlon.long_name = 'longitude'
@@ -117,7 +119,7 @@ def main():
     vice = fout_ice.createVariable('ifrac', 'f4', ('time', 'lat', 'lon'), zlib=True)
     vice.long_name = ifrac.long_name
     vice.missing_value = ifrac.missing_value
-    vice[:] = ifrac[0:ind_ice,:,:]
+    vice[:] = ifrac[ind0_ice:ind1_ice,:,:]
     # global attributes
     fout_ice.note = '{} days ice fraction from {}.\n'.format(nday, fname_ifrac)
     # close files

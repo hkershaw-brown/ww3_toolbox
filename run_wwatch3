@@ -1,0 +1,199 @@
+#!/bin/bash
+#
+# Global test case for grid gx1v6 and gx3v7
+#
+# Qing Li, 20170613
+
+
+# setting
+
+# case name
+gridtype="gx37"  # grid type: gx16 or gx37
+casename="test_ser_${gridtype}"
+
+# run ww3 in MPI mode
+f_mpi="no"
+# number of processors
+nproc=4
+
+# Set switch
+case_switch_ser="F90 NOGRB NOPA LRB4 SHRD PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14"
+case_switch_mpi="F90 NOGRB NOPA LRB4 MPI DIST NC4 PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14"
+
+# specify compiler string (as per in ww3_dir/bin options) here:
+compstr="Intel"
+
+# ww3 dir
+ww3_dir="/glade/u/home/qingli/wwatch3_v5.16"
+tmp_dir="/glade/scratch/qingli/wwatch3v5p16"
+toolbox_dir="/glade/u/home/qingli/src/ww3_toolbox"
+
+# set environment
+export WWATCH3_NETCDF="NC4"
+export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
+export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
+
+# set path
+path_e="${ww3_dir}/exe"          # path for executables
+path_b="${ww3_dir}/bin"          # path for binaries
+path_a="${ww3_dir}/aux"          # path for aux files and scripts
+path_w="${tmp_dir}/${casename}"  # work directory
+path_o="${path_w}/out"           # output directory
+
+# setup work directory
+mkdir -p ${path_w}
+cd ${path_w}
+
+# output directory
+mkdir -p ${path_o}
+
+cp ${path_b}/comp.${compstr} ${path_b}/comp
+cp ${path_b}/link.${compstr} ${path_b}/link
+
+## 1. Grid pre-processor ------------------------------------------------------
+echo " "
+echo " +-------------------+"
+echo " | Grid preprocessor |"
+echo " +-------------------+"
+echo " "
+
+# compile appropriate code 
+#${path_b}/w3_clean all
+#${path_b}/w3_new
+echo ${case_switch_ser} > ${path_b}/switch
+${path_b}/w3_make ww3_grid
+
+rm -f mod_def.*
+path_grid="${toolbox_dir}/grid_inp"
+cp ${path_grid}/${gridtype}_bottom.inp ./
+cp ${path_grid}/${gridtype}_mapsta.inp ./
+cp ${path_grid}/${gridtype}_x.inp ./
+cp ${path_grid}/${gridtype}_y.inp ./
+cp ${path_grid}/ww3_grid.inp.${gridtype} ./ww3_grid.inp
+
+echo "  Screen output routed to ${path_o}/ww3_grid.out"
+${path_e}/ww3_grid > ${path_o}/ww3_grid.out
+mkdir -p grid_inp
+mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ${gridtype}_x.inp ${gridtype}_y.inp ww3_grid.inp ${path_w}/grid_inp
+
+## 2. Initial conditions ------------------------------------------------------
+echo " "
+echo " +--------------------+"
+echo " | Initial conditions |"
+echo " +--------------------+"
+echo " "
+
+# compile appropriate code 
+echo ${case_switch_ser} > ${path_b}/switch
+${path_b}/w3_make ww3_strt
+path_strt="${toolbox_dir}/strt_inp"
+cp ${path_strt}/ww3_strt.inp ./
+
+echo "  Screen output routed to ${path_o}/ww3_strt.out"
+${path_e}/ww3_strt > ${path_o}/ww3_strt.out
+mkdir -p strt_inp
+mv ww3_strt.inp strt_inp/
+
+## 3. Input fields ------------------------------------------------------------
+echo " "
+echo " +--------------+"
+echo " | Input fields |"
+echo " +--------------+"
+echo " "
+
+# compile appropriate code 
+echo ${case_switch_ser} > ${path_b}/switch
+${path_b}/w3_make ww3_prnc
+path_prnc="${toolbox_dir}/prnc_inp"
+
+# prepare input fields
+
+# wind
+cp ${path_prnc}/wind.nc ./
+cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
+echo "  Screen output routed to ${path_o}/ww3_prnc_wind.out"
+${path_e}/ww3_prnc > ${path_o}/ww3_prnc_wind.out
+mkdir -p prnc_inp
+mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
+mv wind.nc prnc_inp/
+
+# ice
+cp ${path_prnc}/ice.nc ./
+cp ${path_prnc}/ww3_prnc.inp.ice ./ww3_prnc.inp
+echo "  Screen output routed to ${path_o}/ww3_prnc_ice.out"
+${path_e}/ww3_prnc > ${path_o}/ww3_prnc_ice.out
+mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
+mv ice.nc prnc_inp/
+
+## 4. Main program ------------------------------------------------------------
+echo " "
+echo " +--------------+"
+echo " | Main program |"
+echo " +--------------+"
+echo " "
+
+# compile appropriate code
+if [ "${f_mpi}" == "yes" ]; then
+	echo ${case_switch_mpi} > ${path_b}/switch
+else
+	echo ${case_switch_ser} > ${path_b}/switch
+fi
+${path_b}/w3_make ww3_shel
+
+path_shel="${toolbox_dir}/shel_inp"
+cp ${path_shel}/ww3_shel.inp ./
+mkdir -p shel_inp
+
+if [ "${f_mpi}" == "yes" ]; then
+	echo "  Running WW3 with ${nproc} processors..."
+
+cat > submit.sh << EOF
+#BSUB -n ${nproc}
+#BSUB -q small
+#BSUB -R "span[ptile=15]"
+#BSUB -N
+#BSUB -W 0:15
+#BSUB -x
+#BSUB -J ${casename}
+#BSUB -e ${casename}.err
+#BSUB -o ${casename}.out
+#BSUB -P UBRN0005
+
+cd ${path_w}
+mpirun -np ${nproc} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+echo "  Log files routed to ${path_o}"
+mv log.* ${path_o}/
+mv ww3_shel.inp shel_inp/
+
+EOF
+	chmod 755 submit.sh
+	bsub < submit.sh
+
+else
+	echo "  Running WW3 with single processor..."
+
+cat > submit.sh << EOF	
+#BSUB -n 1
+#BSUB -q small
+#BSUB -R "span[ptile=15]"
+#BSUB -N
+#BSUB -W 0:15
+#BSUB -x
+#BSUB -J ${casename}
+#BSUB -e ${casename}.err
+#BSUB -o ${casename}.out
+#BSUB -P UBRN0005
+
+cd ${path_w}
+${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+echo "  Log files routed to ${path_o}"
+mv log.* ${path_o}/
+mv ww3_shel.inp shel_inp/
+
+EOF
+	chmod 755 submit.sh
+	bsub < submit.sh
+
+fi
+
+
