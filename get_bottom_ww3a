@@ -4,4 +4,65 @@
 #
 # Qing Li, 20170614
 
-import
+import sys
+import numpy as np
+from astropy.io import ascii
+
+def main():
+    """
+    Read gx16_bottom.inp, interpolate to grid ww3a and save to
+    ww3a_bottom.inp
+    """
+    infile = './grid_inp/gx16_bottom.inp'
+    xfile = './grid_inp/gx16_x.inp'
+    yfile = './grid_inp/gx16_y.inp'
+    maskfile = './grid_inp/ww3a_mapsta.inp'
+    outfile = './grid_inp/ww3a_bottom.inp'
+
+    indat = np.loadtxt(infile, delimiter=' ')
+    xdat = np.loadtxt(xfile, delimiter=' ')
+    ydat = np.loadtxt(yfile, delimiter=' ')
+    #print(indat)
+    #print(xdat[0,:])
+    #print(ydat[0,:])
+
+    # setup ww3a grid
+    nlat = 50
+    nlon = 90
+    dlon = 360/nlon
+    mlat = 78.4
+    dlat = mlat*2/(nlat-1)
+    lat = np.arange(-mlat, mlat+dlat, dlat)
+    lon = np.arange(0, 360, dlon)
+    #print(lat)
+    #print(lon)
+
+    # read in mask
+    maskdat = np.loadtxt(maskfile, delimiter=' ')
+
+    outdat = np.zeros([nlat, nlon])
+    for i in range(0, nlon):
+        for j in range(0, nlat):
+            ymax = lat[nlat-1-j] + dlat/2
+            ymin = lat[nlat-1-j] - dlat/2
+            xmax = lon[i] + dlon/2
+            xmin = lon[i] - dlon/2
+            if xmin < 0:
+                xmin2 = xmin + 360
+                xmax2 = 360
+                mask = (ydat > ymin) & (ydat < ymax) & (((xdat > xmin) & (xdat < xmax)) | ((xdat > xmin2) & (xdat < xmax2)))
+            elif xmax > 360:
+                xmax2 = xmax - 360
+                xmin2 = 0
+                mask = (ydat > ymin) & (ydat < ymax) & (((xdat > xmin) & (xdat < xmax)) | ((xdat > xmin2) & (xdat < xmax2)))
+            else:
+                mask = (ydat > ymin) & (ydat < ymax) & (xdat > xmin) & (xdat < xmax)
+
+            if maskdat[j, i] > 0 and np.any(mask):
+                outdat[j, i] = np.mean(indat[mask])
+                print(outdat[j, i])
+
+    #ascii.write(outdat, outfile, format='no_header')
+
+if __name__ == "__main__":
+    main()
