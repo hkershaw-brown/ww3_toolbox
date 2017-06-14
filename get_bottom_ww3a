@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+# This script generate bottom depth file for grid
+# ww3a. Interpolated from gx16
+#
+# Qing Li, 20170614
+
+import
