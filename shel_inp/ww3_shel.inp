@@ -223,15 +223,15 @@ $
 $ (1) Forcing Fields
   T
 $ DPT CUR WND AST WLV ICE IBG D50 IC1 IC5
-  T   T   T   T   T   F   F   F   F   F
+  T   F   T   T   F   T   F   F   F   F
 $ (2) Standard mean wave Parameters
   T
 $ HS  LM  T02 T0M1 T01 FP DIR SPR DP
   T   T   T   T   T   T   T   T   T
 $ (3) Frequency-dependent parameters
-  T
+  F
 $ EF TH1M STH1M TH2M STH2M WN
-  T   T   T   F   F   F
+$  T   T   T   F   F   F
 $ (4) Spectral Partition Parameters
   F
 $ PHS PTP PLP PDIR PSPR PWS TWS PNR
@@ -239,7 +239,7 @@ $  T   T   T   T   T   T   T   T
 $ (5) Atmosphere-waves layer
   T
 $ UST CHA CGE FAW TAW TWA WCC WCF WCH WCM
-  T   T   T   T   T   T   T   T   T   T
+  T   F   F   F   F   F   F   F   F   F
 $ (6) Wave-Ocean layer
   T
 $ SXY TWO BHD FOC TUS USS P2S USF P2L TWI FIC

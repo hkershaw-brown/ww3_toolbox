@@ -1,21 +1,25 @@
 #!/bin/bash
 #
-# Global test case for grid gx1v6 and gx3v7
+# This script sets up and submits job of global WW3 simulation
+# on grid gx37, gx16 or ww3a on Yellowstone.
+# All input files are prepared in directory ${toolbox_dir}. 
+# Run times should be consistent with input fields wind.nc and ice.nc.
 #
 # Qing Li, 20170613
-
-
-# setting
 
 # case name
 gridtype="gx37"  # grid type: gx16 or gx37 or ww3a
 casename="test_ser_${gridtype}"
 
 # run times
-t_beg="20090101 000000"  # first output
-t_end="20090102 000000"  # last output
-dt="3600"                # output interval
-dtrs="21600"             # restart interval
+# (nonzero hhmmss not supported)
+t_beg="20090702 000000"  # first output
+t_end="20090703 000000"  # last output
+dt="21600"               # output interval
+dtrs="86400"             # restart interval
+
+# restart run or not
+f_restart="yes"
 
 # run ww3 in MPI mode
 f_mpi="yes"
@@ -23,10 +27,16 @@ f_mpi="yes"
 nproc=4
 # wall time (hh:mm)
 walltime="0:15"
+# queue (small, regular)
+queue="small"
+# project number
+projnum="UBRN0005 "
 
-# Set switch
-case_switch_ser="F90 NOGRB NOPA LRB4 SHRD PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14 NC4"
-case_switch_mpi="F90 NOGRB NOPA LRB4 MPI DIST NC4 PR3 UQ FLX2 LN1 ST2 STAB2 NL1 BT1 DB1 MLIM TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11 O14 NC4"
+# set switch
+case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
+"NL1 TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
+case_switch_ser="${case_switch_base} SHRD"
+case_switch_mpi="${case_switch_base} MPI DIST"
 
 # specify compiler string (as per in ww3_dir/bin options) here:
 compstr="Intel"
@@ -41,17 +51,39 @@ export WWATCH3_NETCDF="NC4"
 export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
 export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
 
-## 0. Preprocessing
+## functions ------------------------------------------------------------------
+check_error () {
+# stop if any error occurs
+	if [ $? -ne 0 ]; then
+		echo $1
+		exit 1
+	fi
+}
+
+print_title () {
+# print section title
+	nl=${#1}
+	str=`printf  '%.0s-' $(seq 1 $(( ${nl}+2 )))`
+	echo " "
+	echo " "
+	echo "  +${str}+"
+	echo "  | $1 |"
+	echo "  +${str}+"
+	echo " "
+	echo " "
+}
+
+## 0. Preprocessing -----------------------------------------------------------
+print_title "Preprocessing"
+
 # calculate the output file number
-#y_beg=${t_beg:0:4}
-#y_end=${t_end:0:4}
-#m_beg=${t_beg:4:2}
-#m_end=${t_end:4:2}
-#d_beg=${t_beg:6:2}
-#d_end=${t_end:6:2}
-#nday=$((${y_end}))
-nday=1
-nfile=$((${nday}*86400/${dt}))
+date_beg=${t_beg:0:8}
+date_end=${t_end:0:8}
+nsec=$(( $(date --date=${date_end} +%s) - $(date --date=${date_beg} +%s) ))
+nday=$(( ${nsec}/86400 ))
+nfile=$(( ${nsec}/${dt} ))
+nres=$(( ${nsec}/${dtrs} ))
+
 # spatial dimensions
 if [ "${gridtype}" == "gx37" ]; then
 	nx=100
@@ -72,29 +104,33 @@ path_e="${ww3_dir}/exe"          # path for executables
 path_b="${ww3_dir}/bin"          # path for binaries
 path_a="${ww3_dir}/aux"          # path for aux files and scripts
 path_w="${tmp_dir}/${casename}"  # work directory
-path_o="${path_w}/out"           # output directory
 path_d="${toolbox_dir}/data"     # input data directory
+path_o="${path_w}/out"           # output directory
+path_r="${path_w}/restart"       # restart directory
 
 # setup work directory
 mkdir -p ${path_w}
 cd ${path_w}
 
-# output directory
+# setup output directory
 mkdir -p ${path_o}
 
+# setup restart directory
+mkdir -p ${path_r}
+
+# setup compiler and linker script
 cp ${path_b}/comp.${compstr} ${path_b}/comp
 cp ${path_b}/link.${compstr} ${path_b}/link
 
-# new case
+# clean old files and create new case
 ${path_b}/w3_clean all
 ${path_b}/w3_new
 
+# check error
+check_error "Error in Step 0. Stop..."
+
 ## 1. Grid pre-processor ------------------------------------------------------
-echo " "
-echo " +-------------------+"
-echo " | Grid preprocessor |"
-echo " +-------------------+"
-echo " "
+print_title "Grid preprocessor"
 
 # compile appropriate code 
 echo ${case_switch_ser} > ${path_b}/switch
@@ -113,32 +149,43 @@ cp ${path_grid}/ww3_grid.inp.${gridtype} ./ww3_grid.inp
 echo "  Screen output routed to ${path_o}/ww3_grid.out"
 ${path_e}/ww3_grid > ${path_o}/ww3_grid.out
 mkdir -p grid_inp
-mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ${gridtype}_x.inp ${gridtype}_y.inp ww3_grid.inp ${path_w}/grid_inp
+mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ${gridtype}_x.inp \
+	${gridtype}_y.inp ww3_grid.inp ${path_w}/grid_inp
+
+# check error
+check_error "Error in Step 1. Stop..."
 
 ## 2. Initial conditions ------------------------------------------------------
-echo " "
-echo " +--------------------+"
-echo " | Initial conditions |"
-echo " +--------------------+"
-echo " "
+print_title "Initial conditions"
 
-# compile appropriate code 
-echo ${case_switch_ser} > ${path_b}/switch
-${path_b}/w3_make ww3_strt
-path_strt="${toolbox_dir}/strt_inp"
-cp ${path_strt}/ww3_strt.inp ./
+if [ "${f_restart}" == "yes" ]; then
+	file_res="${path_r}/restart_${date_beg}.ww3"
+	if [ -e ${file_res} ]; then
+		echo "Restarting run from ${file_res}..."
+		cp ${file_res} ./restart.ww3
+	else
+		echo "Restart file ${file_res} not found. Stop."
+		exit 1
+	fi
+else
+	echo "Starting from initial condition...Preparing..."
+	# compile appropriate code 
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_strt
+	path_strt="${toolbox_dir}/strt_inp"
+	cp ${path_strt}/ww3_strt.inp ./
 
-echo "  Screen output routed to ${path_o}/ww3_strt.out"
-${path_e}/ww3_strt > ${path_o}/ww3_strt.out
-mkdir -p strt_inp
-mv ww3_strt.inp strt_inp/
+	echo "  Screen output routed to ${path_o}/ww3_strt.out"
+	${path_e}/ww3_strt > ${path_o}/ww3_strt.out
+	mkdir -p strt_inp
+	mv ww3_strt.inp strt_inp/
+fi
+
+# check error
+check_error "Error in Step 2. Stop..."
 
 ## 3. Input fields ------------------------------------------------------------
-echo " "
-echo " +--------------+"
-echo " | Input fields |"
-echo " +--------------+"
-echo " "
+print_title "Input fields"
 
 # compile appropriate code 
 echo ${case_switch_ser} > ${path_b}/switch
@@ -146,7 +193,6 @@ ${path_b}/w3_make ww3_prnc
 path_prnc="${toolbox_dir}/prnc_inp"
 
 # prepare input fields
-
 # wind
 ln -s ${path_d}/wind.nc ./
 cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
@@ -164,12 +210,11 @@ ${path_e}/ww3_prnc > ${path_o}/ww3_prnc_ice.out
 mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
 rm ice.nc
 
+# check error
+check_error "Error in Step 3. Stop..."
+
 ## 4. Main program ------------------------------------------------------------
-echo " "
-echo " +--------------+"
-echo " | Main program |"
-echo " +--------------+"
-echo " "
+print_title "Main program"
 
 # compile appropriate code
 if [ "${f_mpi}" == "yes" ]; then
@@ -179,6 +224,7 @@ else
 fi
 ${path_b}/w3_make ww3_shel
 
+# processing input file
 path_shel="${toolbox_dir}/shel_inp"
 cp ${path_shel}/ww3_shel.inp ./ww3_shel.inp.tmp0
 `sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_shel.inp.tmp0 > ww3_shel.inp.tmp1`
@@ -188,16 +234,17 @@ cp ${path_shel}/ww3_shel.inp ./ww3_shel.inp.tmp0
 rm ww3_shel.inp.tmp?
 mkdir -p shel_inp
 
-## 5. Gridded NetCDF output post-processor ------------------------------------
-echo " "
-echo " +--------------------------------------+"
-echo " | Gridded NetCDF output post-processor |"
-echo " +--------------------------------------+"
-echo " "
+# check error
+check_error "Error in Step 4. Stop..."
+
+## 5. Gridded netCDF output post-processor ------------------------------------
+print_title "Gridded netCDF output post-processor"
 
 # compile appropriate code
 echo ${case_switch_ser} > ${path_b}/switch
 ${path_b}/w3_make ww3_ounf
+
+# processing input file
 path_ounf="${toolbox_dir}/ounf_inp"
 cp ${path_ounf}/ww3_ounf.inp ./ww3_ounf.inp.tmp0
 `sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_ounf.inp.tmp0 > ww3_ounf.inp.tmp1`
@@ -208,19 +255,24 @@ cp ${path_ounf}/ww3_ounf.inp ./ww3_ounf.inp.tmp0
 rm ww3_ounf.inp.tmp?
 mkdir -p ounf_inp
 
+# restart file
+nnn_res=`printf %03d ${nres}`
+sav_res="restart${nnn_res}.ww3"
+rname_res="restart_${date_end}.ww3"
+
+# check error
+check_error "Error in Step 5. Stop..."
+
 ## 6. Submitting job ----------------------------------------------------------
-echo " "
-echo " +----------------+"
-echo " | Submitting job |"
-echo " +----------------+"
-echo " "
+print_title "Submitting job"
 
 if [ "${f_mpi}" == "yes" ]; then
 	echo "  Running WW3 with ${nproc} processors..."
 
-cat > submit.sh << EOF
+# generate submission script
+	cat > submit.sh << EOF
 #BSUB -n ${nproc}
-#BSUB -q small
+#BSUB -q ${queue}
 #BSUB -R "span[ptile=15]"
 #BSUB -N
 #BSUB -W ${walltime}
@@ -228,7 +280,7 @@ cat > submit.sh << EOF
 #BSUB -J ${casename}
 #BSUB -e ${casename}.err
 #BSUB -o ${casename}.out
-#BSUB -P UBRN0005
+#BSUB -P ${projnum}
 
 cd ${path_w}
 mpirun -np ${nproc} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
@@ -238,17 +290,18 @@ mv ww3_shel.inp shel_inp/
 
 ${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
 mv ww3_ounf.inp ounf_inp/
+mv ww3.*.nc out/
+mv ${sav_res} restart/${rname_res}
 
 EOF
-	chmod 755 submit.sh
-	bsub < submit.sh
 
 else
 	echo "  Running WW3 with single processor..."
 
-cat > submit.sh << EOF	
+# generate submission script
+	cat > submit.sh << EOF	
 #BSUB -n 1
-#BSUB -q small
+#BSUB -q ${queue}
 #BSUB -R "span[ptile=15]"
 #BSUB -N
 #BSUB -W ${walltime}
@@ -256,7 +309,7 @@ cat > submit.sh << EOF
 #BSUB -J ${casename}
 #BSUB -e ${casename}.err
 #BSUB -o ${casename}.out
-#BSUB -P UBRN0005
+#BSUB -P ${projnum} 
 
 cd ${path_w}
 ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
@@ -266,11 +319,16 @@ mv ww3_shel.inp shel_inp/
 
 ${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
 mv ww3_ounf.inp ounf_inp/
+mv ww3.*.nc out/
+mv ${sav_res} restart/${rname_res}
 
 EOF
-	chmod 755 submit.sh
-	bsub < submit.sh
 
 fi
 
+# check error
+	check_error "Error in Step 6. Stop..."
 
+# submitting job
+	chmod 755 submit.sh
+	bsub < submit.sh
