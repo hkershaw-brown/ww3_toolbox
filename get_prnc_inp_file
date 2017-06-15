@@ -5,7 +5,6 @@
 #  Qing Li, 20170609
 
 import sys
-import numpy as np
 from netCDF4 import Dataset
 import datetime
 
@@ -22,7 +21,7 @@ def main():
     out_path = './prnc_inp'
 
     # output time in days
-    nday = 5
+    nday = 365
     ind0_wind = 0
     ind0_ice = 0
     ind1_wind = nday*4

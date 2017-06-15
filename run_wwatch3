@@ -73,6 +73,7 @@ path_b="${ww3_dir}/bin"          # path for binaries
 path_a="${ww3_dir}/aux"          # path for aux files and scripts
 path_w="${tmp_dir}/${casename}"  # work directory
 path_o="${path_w}/out"           # output directory
+path_d="${toolbox_dir}/data"     # input data directory
 
 # setup work directory
 mkdir -p ${path_w}
@@ -147,21 +148,21 @@ path_prnc="${toolbox_dir}/prnc_inp"
 # prepare input fields
 
 # wind
-cp ${path_prnc}/wind.nc ./
+ln -s ${path_d}/wind.nc ./
 cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
 echo "  Screen output routed to ${path_o}/ww3_prnc_wind.out"
 ${path_e}/ww3_prnc > ${path_o}/ww3_prnc_wind.out
 mkdir -p prnc_inp
 mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
-mv wind.nc prnc_inp/
+rm wind.nc
 
 # ice
-cp ${path_prnc}/ice.nc ./
+ln -s ${path_d}/ice.nc ./
 cp ${path_prnc}/ww3_prnc.inp.ice ./ww3_prnc.inp
 echo "  Screen output routed to ${path_o}/ww3_prnc_ice.out"
 ${path_e}/ww3_prnc > ${path_o}/ww3_prnc_ice.out
 mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
-mv ice.nc prnc_inp/
+rm ice.nc
 
 ## 4. Main program ------------------------------------------------------------
 echo " "
