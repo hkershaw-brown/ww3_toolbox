@@ -7,6 +7,8 @@
 import sys
 import numpy as np
 from astropy.io import ascii
+import matplotlib.pyplot as plt
+from matplotlib.mlab import griddata
 
 def main():
     """
@@ -60,9 +62,32 @@ def main():
 
             if maskdat[j, i] > 0 and np.any(mask):
                 outdat[j, i] = np.mean(indat[mask])
-                print(outdat[j, i])
+                #print(outdat[j, i])
 
-    #ascii.write(outdat, outfile, format='no_header')
+    # plot original field and interpotated field
+    #nc, nr = 300, 300
+    #xi = np.linspace(xdat.min(), xdat.max(), nc)
+    #yi = np.linspace(ydat.min(), ydat.max(), nr)
+    #xi, yi = np.meshgrid(xi, yi)
+    #zi = griddata(xdat.flatten(), ydat.flatten(), indat.flatten(), xi, yi, interp='linear')
+    #cs0 = plt.pcolor(xi, yi, zi)
+    #plt.title('gx16 bottom')
+    #plt.xlabel('Longitude')
+    #plt.ylabel('Latitude')
+    #plt.colorbar(cs0)
+    #plt.savefig('bottom_gx16.pdf')
+    #plt.clf()
+
+    #cs1 = plt.pcolor(lon, -lat, outdat)
+    #plt.title('ww3a bottom')
+    #plt.xlabel('Longitude')
+    #plt.ylabel('Latitude')
+    #plt.colorbar(cs1)
+    #plt.savefig('bottom_ww3a.pdf')
+    #plt.clf()
+
+    # write output
+    ascii.write(outdat, outfile, format='no_header')
 
 if __name__ == "__main__":
     main()

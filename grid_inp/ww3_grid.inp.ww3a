@@ -36,7 +36,7 @@ $
   90 50
   4.0 3.2 1
   0.0 -78.4 1
-  -0.1 2.50 23 -1. 1 1 '(....)' 'NAME' 'ww3a_bottom.inp'
+  -0.1 2.50 23 -1. 3 1 '(....)' 'NAME' 'ww3a_bottom.inp'
   24 3 1 '(....)' 'NAME' 'ww3a_mapsta.inp'
 $
 $  Close list by defining line with 0 points (mandatory)
