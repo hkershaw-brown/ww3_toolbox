@@ -13,13 +13,16 @@ casename="test_ser_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
-t_beg="20090702 000000"  # first output
-t_end="20090703 000000"  # last output
+t_beg="20090703 000000"  # first output
+t_end="20090704 000000"  # last output
 dt="21600"               # output interval
 dtrs="86400"             # restart interval
 
 # restart run or not
 f_restart="yes"
+
+# machine name (yellowstone or cheyenne)
+f_machine="yellowstone"
 
 # run ww3 in MPI mode
 f_mpi="yes"
@@ -268,10 +271,17 @@ print_title "Submitting job"
 
 if [ "${f_mpi}" == "yes" ]; then
 	echo "  Running WW3 with ${nproc} processors..."
+	np=${nproc}
+else
+	echo "  Running WW3 with single processor..."
+	np=1
+fi
 
-# generate submission script
+# generate machine-specific submission script
+if [ "${f_machine}" == "yellowstone" ]; then
+	exempi="mpirun.lsf"
 	cat > submit.sh << EOF
-#BSUB -n ${nproc}
+#BSUB -n ${np}
 #BSUB -q ${queue}
 #BSUB -R "span[ptile=15]"
 #BSUB -N
@@ -282,53 +292,60 @@ if [ "${f_mpi}" == "yes" ]; then
 #BSUB -o ${casename}.out
 #BSUB -P ${projnum}
 
-cd ${path_w}
-mpirun -np ${nproc} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
-echo "  Log files routed to ${path_o}"
-mv log.* ${path_o}/
-mv ww3_shel.inp shel_inp/
-
-${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
-mv ww3_ounf.inp ounf_inp/
-mv ww3.*.nc out/
-mv ${sav_res} restart/${rname_res}
+EOF
+elif [ "${f_machine}" == "cheyenne" ]; then
+	nnode=$(( ${np} % 36 + 1 ))
+	if [ ${nnode} -eq 1 ]; then
+		ncpu=${np}
+	else
+		ncpu=$(( ${np} / ${nnode} ))
+	fi
+	exempi="mpiexec_mpt -n ${np}"
+	cat > submit.sh << EOF
+#PBS -N ${casename}
+#PBS -j oe
+#PBS -q ${queue}
+#PBS -l walltime=00:${walltime}
+#PBS -A ${projnum}
+#PBS -l select=${nnode}:ncpus=${ncpu}:mpiprocs=${ncpu}
 
 EOF
-
 else
-	echo "  Running WW3 with single processor..."
-
-# generate submission script
-	cat > submit.sh << EOF	
-#BSUB -n 1
-#BSUB -q ${queue}
-#BSUB -R "span[ptile=15]"
-#BSUB -N
-#BSUB -W ${walltime}
-#BSUB -x
-#BSUB -J ${casename}
-#BSUB -e ${casename}.err
-#BSUB -o ${casename}.out
-#BSUB -P ${projnum} 
-
-cd ${path_w}
-${path_e}/ww3_shel > ${path_o}/ww3_shel.out
-echo "  Log files routed to ${path_o}"
-mv log.* ${path_o}/
-mv ww3_shel.inp shel_inp/
-
-${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
-mv ww3_ounf.inp ounf_inp/
-mv ww3.*.nc out/
-mv ${sav_res} restart/${rname_res}
-
-EOF
-
+	echo "Machine ${f_machine} not supported. Stop."
+	exit 1
 fi
 
+if [ "${f_mpi}" == "yes" ]; then
+	cat >> submit.sh << EOF
+cd ${path_w}
+${exempi} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+EOF
+else
+	cat >> submit.sh << EOF
+cd ${path_w}
+${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+EOF
+fi
+
+cat >> submit.sh << EOF
+echo "  Log files routed to ${path_o}"
+mv log.* ${path_o}/
+mv ww3_shel.inp shel_inp/
+
+${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
+mv ww3_ounf.inp ounf_inp/
+mv ww3.*.nc out/
+mv ${sav_res} restart/${rname_res}
+
+EOF
+
 # check error
-	check_error "Error in Step 6. Stop..."
+check_error "Error in Step 6. Stop..."
 
 # submitting job
-	chmod 755 submit.sh
+chmod 755 submit.sh
+if [ "${f_machine}" == "yellowstone" ]; then
 	bsub < submit.sh
+elif [ "${f_machine}" == "cheyenne" ]; then
+	qsub submit.sh
+fi
