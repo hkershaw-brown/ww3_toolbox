@@ -7,33 +7,33 @@
 #
 # Qing Li, 20170613
 
+## Run control ----------------------------------------------------------------
 # case name
 gridtype="gx37"  # grid type: gx16 or gx37 or ww3a
 casename="test_ser_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
-t_beg="20090703 000000"  # first output
-t_end="20090704 000000"  # last output
+t_beg="20090704 000000"  # first output
+t_end="20090705 000000"  # last output
 dt="21600"               # output interval
 dtrs="86400"             # restart interval
 
 # restart run or not
 f_restart="yes"
+# update input file or not
+f_input="no"
+# clean old exes and build new ones
+f_new="no"
 
-# machine name (yellowstone or cheyenne)
-f_machine="yellowstone"
-
-# run ww3 in MPI mode
-f_mpi="yes"
 # number of processors
 nproc=4
 # wall time (hh:mm)
-walltime="0:15"
-# queue (small, regular)
+walltime="00:15"
+# queue (small, regular, economy)
 queue="small"
 # project number
-projnum="UBRN0005 "
+#projnum="UBRN0005"
 
 # set switch
 case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
@@ -44,14 +44,24 @@ case_switch_mpi="${case_switch_base} MPI DIST"
 # specify compiler string (as per in ww3_dir/bin options) here:
 compstr="Intel"
 
-# ww3 dir
-ww3_dir="/glade/u/home/qingli/wwatch3_v5.16"
+# set directory
 tmp_dir="/glade/scratch/qingli/wwatch3v5p16"
 toolbox_dir="/glade/u/home/qingli/src/ww3_toolbox"
 
 # set environment
 export WWATCH3_NETCDF="NC4"
-export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
+if [[ ${HOSTNAME} == yslogin* ]]; then
+	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16"
+	projnum="UBRN0005"
+	export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
+elif [[ ${HOSTNAME} == cheyenne* ]]; then
+	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16_cheyenne"
+	projnum="P93300612"
+	export NETCDF_CONFIG="/glade/u/apps/ch/opt/netcdf/4.4.1.1/intel/16.0.3/bin/nc-config"
+else
+	echo "Machine ${HOSTNAME} not supported. Stop."
+	exit 1
+fi
 export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
 
 ## functions ------------------------------------------------------------------
@@ -79,6 +89,13 @@ print_title () {
 ## 0. Preprocessing -----------------------------------------------------------
 print_title "Preprocessing"
 
+if [[ ${nproc} -gt 1 ]]; then
+	# run ww3 in MPI mode
+	f_mpi="yes"
+else
+	f_mpi="no"
+fi
+
 # calculate the output file number
 date_beg=${t_beg:0:8}
 date_end=${t_end:0:8}
@@ -88,13 +105,13 @@ nfile=$(( ${nsec}/${dt} ))
 nres=$(( ${nsec}/${dtrs} ))
 
 # spatial dimensions
-if [ "${gridtype}" == "gx37" ]; then
+if [[ ${gridtype} == gx37 ]]; then
 	nx=100
 	ny=116
-elif [ "${gridtype}" == "gx16" ]; then
+elif [[ ${gridtype} == gx16 ]]; then
 	nx=320
 	ny=384
-elif [ "${gridtype}" == "ww3a" ]; then
+elif [[ ${gridtype} == ww3a ]]; then
 	nx=90
 	ny=50
 else
@@ -126,8 +143,10 @@ cp ${path_b}/comp.${compstr} ${path_b}/comp
 cp ${path_b}/link.${compstr} ${path_b}/link
 
 # clean old files and create new case
-${path_b}/w3_clean all
-${path_b}/w3_new
+if [[ ${l_new} == yes ]]; then
+	${path_b}/w3_clean all
+	${path_b}/w3_new
+fi
 
 # check error
 check_error "Error in Step 0. Stop..."
@@ -161,9 +180,9 @@ check_error "Error in Step 1. Stop..."
 ## 2. Initial conditions ------------------------------------------------------
 print_title "Initial conditions"
 
-if [ "${f_restart}" == "yes" ]; then
+if [[ ${f_restart} == yes ]]; then
 	file_res="${path_r}/restart_${date_beg}.ww3"
-	if [ -e ${file_res} ]; then
+	if [[ -e ${file_res} ]]; then
 		echo "Restarting run from ${file_res}..."
 		cp ${file_res} ./restart.ww3
 	else
@@ -188,39 +207,42 @@ fi
 check_error "Error in Step 2. Stop..."
 
 ## 3. Input fields ------------------------------------------------------------
-print_title "Input fields"
+# update input files
+if [[ ${f_input} == yes ]]; then
+	print_title "Input fields"
 
-# compile appropriate code 
-echo ${case_switch_ser} > ${path_b}/switch
-${path_b}/w3_make ww3_prnc
-path_prnc="${toolbox_dir}/prnc_inp"
+	# compile appropriate code 
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_prnc
+	path_prnc="${toolbox_dir}/prnc_inp"
 
-# prepare input fields
-# wind
-ln -s ${path_d}/wind.nc ./
-cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
-echo "  Screen output routed to ${path_o}/ww3_prnc_wind.out"
-${path_e}/ww3_prnc > ${path_o}/ww3_prnc_wind.out
-mkdir -p prnc_inp
-mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
-rm wind.nc
-
-# ice
-ln -s ${path_d}/ice.nc ./
-cp ${path_prnc}/ww3_prnc.inp.ice ./ww3_prnc.inp
-echo "  Screen output routed to ${path_o}/ww3_prnc_ice.out"
-${path_e}/ww3_prnc > ${path_o}/ww3_prnc_ice.out
-mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
-rm ice.nc
-
-# check error
-check_error "Error in Step 3. Stop..."
+	# prepare input fields
+	# wind
+	ln -s ${path_d}/wind.nc ./
+	cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_o}/ww3_prnc_wind.out"
+	${path_e}/ww3_prnc > ${path_o}/ww3_prnc_wind.out
+	mkdir -p prnc_inp
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
+	rm wind.nc
+	
+	# ice
+	ln -s ${path_d}/ice.nc ./
+	cp ${path_prnc}/ww3_prnc.inp.ice ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_o}/ww3_prnc_ice.out"
+	${path_e}/ww3_prnc > ${path_o}/ww3_prnc_ice.out
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
+	rm ice.nc
+	
+	# check error
+	check_error "Error in Step 3. Stop..."
+fi
 
 ## 4. Main program ------------------------------------------------------------
 print_title "Main program"
 
 # compile appropriate code
-if [ "${f_mpi}" == "yes" ]; then
+if [[ ${f_mpi} == yes ]]; then
 	echo ${case_switch_mpi} > ${path_b}/switch
 else
 	echo ${case_switch_ser} > ${path_b}/switch
@@ -269,19 +291,15 @@ check_error "Error in Step 5. Stop..."
 ## 6. Submitting job ----------------------------------------------------------
 print_title "Submitting job"
 
-if [ "${f_mpi}" == "yes" ]; then
-	echo "  Running WW3 with ${nproc} processors..."
-	np=${nproc}
-else
-	echo "  Running WW3 with single processor..."
-	np=1
-fi
+echo "  Running WW3 with ${nproc} processors..."
 
 # generate machine-specific submission script
-if [ "${f_machine}" == "yellowstone" ]; then
+if [[ ${HOSTNAME} == yslogin* ]]; then
 	exempi="mpirun.lsf"
+# write LSF header for yellowstone
 	cat > submit.sh << EOF
-#BSUB -n ${np}
+#!/bin/bash
+#BSUB -n ${nproc}
 #BSUB -q ${queue}
 #BSUB -R "span[ptile=15]"
 #BSUB -N
@@ -292,42 +310,80 @@ if [ "${f_machine}" == "yellowstone" ]; then
 #BSUB -o ${casename}.out
 #BSUB -P ${projnum}
 
+module load intel
+module load impi
+
 EOF
-elif [ "${f_machine}" == "cheyenne" ]; then
-	nnode=$(( ${np} % 36 + 1 ))
+# write postprocessing script for yellowstone
+	cat > postproc.sh << EOF
+#!/bin/bash
+
+EOF
+
+elif [[ ${HOSTNAME} == cheyenne* ]]; then
+	nnode=$(( ${nproc} / 36 + 1 ))
 	if [ ${nnode} -eq 1 ]; then
-		ncpu=${np}
+		ncpu=${nproc}
 	else
-		ncpu=$(( ${np} / ${nnode} ))
+		ncpu=$(( ${nproc} / ${nnode} ))
 	fi
-	exempi="mpiexec_mpt -n ${np}"
+	exempi="mpiexec_mpt"
+# write PBS header for cheyenne
 	cat > submit.sh << EOF
+#!/bin/bash
 #PBS -N ${casename}
 #PBS -j oe
 #PBS -q ${queue}
-#PBS -l walltime=00:${walltime}
+#PBS -l walltime=${walltime}:00
 #PBS -A ${projnum}
 #PBS -l select=${nnode}:ncpus=${ncpu}:mpiprocs=${ncpu}
 
-EOF
-else
-	echo "Machine ${f_machine} not supported. Stop."
-	exit 1
-fi
+module load intel
+module load mpt
 
-if [ "${f_mpi}" == "yes" ]; then
-	cat >> submit.sh << EOF
+export MPI_SHEPHERD=true
+EOF
+# write postprocessing script for cheyenne
+	cat > postproc.sh << EOF
+#!/bin/bash
+#PBS -N pp_${casename}
+#PBS -j oe
+#PBS -q ${queue}
+#PBS -l walltime=00:15:00
+#PBS -A ${projnum}
+#PBS -l select=1:ncpus=1:mpiprocs=1
+
+EOF
+
+fi # check hostname
+
+# write command
+if [[ ${f_mpi} == yes ]]; then
+# mpi run
+	if [[ ${HOSTNAME} == yslogin* ]]; then
+		cat >> submit.sh << EOF
 cd ${path_w}
 ${exempi} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+./postproc.sh
 EOF
+	elif [[ ${HOSTNAME} == cheyenne* ]]; then
+		cat >> submit.sh << EOF
+cd ${path_w}
+${exempi} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+qsub -W depend=afterok:\$PBS_JOBID ./postproc.sh
+EOF
+	fi
+# single processor run
 else
 	cat >> submit.sh << EOF
 cd ${path_w}
 ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+./postproc.sh
 EOF
 fi
 
-cat >> submit.sh << EOF
+# command for postprocessing script
+cat >> postproc.sh << EOF
 echo "  Log files routed to ${path_o}"
 mv log.* ${path_o}/
 mv ww3_shel.inp shel_inp/
@@ -344,8 +400,9 @@ check_error "Error in Step 6. Stop..."
 
 # submitting job
 chmod 755 submit.sh
-if [ "${f_machine}" == "yellowstone" ]; then
+chmod 755 postproc.sh
+if [[ ${HOSTNAME} == yslogin* ]]; then
 	bsub < submit.sh
-elif [ "${f_machine}" == "cheyenne" ]; then
+elif [[ ${HOSTNAME} == cheyenne* ]]; then
 	qsub submit.sh
 fi
