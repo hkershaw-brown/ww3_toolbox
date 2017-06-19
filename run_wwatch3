@@ -9,29 +9,29 @@
 
 ## Run control ----------------------------------------------------------------
 # case name
-gridtype="gx37"  # grid type: gx16 or gx37 or ww3a
-casename="test_ser_${gridtype}"
+gridtype="gx16"  # grid type: gx16 or gx37 or ww3a
+casename="run05_200907_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
-t_beg="20090704 000000"  # first output
-t_end="20090705 000000"  # last output
+t_beg="20090701 000000"  # first output
+t_end="20090731 000000"  # last output
 dt="21600"               # output interval
 dtrs="86400"             # restart interval
 
 # restart run or not
-f_restart="yes"
+f_restart="no"
 # update input file or not
-f_input="no"
+f_input="yes"
 # clean old exes and build new ones
-f_new="no"
+f_new="yes"
 
 # number of processors
-nproc=4
+nproc=16
 # wall time (hh:mm)
-walltime="00:15"
+walltime="00:30"
 # queue (small, regular, economy)
-queue="small"
+queue="regular"
 # project number
 #projnum="UBRN0005"
 
@@ -123,27 +123,29 @@ fi
 path_e="${ww3_dir}/exe"          # path for executables
 path_b="${ww3_dir}/bin"          # path for binaries
 path_a="${ww3_dir}/aux"          # path for aux files and scripts
-path_w="${tmp_dir}/${casename}"  # work directory
-path_d="${toolbox_dir}/data"     # input data directory
-path_o="${path_w}/out"           # output directory
-path_r="${path_w}/restart"       # restart directory
+path_work="${tmp_dir}/${casename}"  # work directory
+path_dat="${toolbox_dir}/data"     # input data directory
+path_out="${path_work}/out"           # output directory
+path_res="${path_work}/restart"       # restart directory
+path_exe="${path_work}/exe"
 
 # setup work directory
-mkdir -p ${path_w}
-cd ${path_w}
+mkdir -p ${path_work}
+mkdir -p ${path_exe}
+cd ${path_work}
 
 # setup output directory
-mkdir -p ${path_o}
+mkdir -p ${path_out}
 
 # setup restart directory
-mkdir -p ${path_r}
+mkdir -p ${path_res}
 
 # setup compiler and linker script
 cp ${path_b}/comp.${compstr} ${path_b}/comp
 cp ${path_b}/link.${compstr} ${path_b}/link
 
 # clean old files and create new case
-if [[ ${l_new} == yes ]]; then
+if [[ ${f_new} == yes ]]; then
 	${path_b}/w3_clean all
 	${path_b}/w3_new
 fi
@@ -157,22 +159,24 @@ print_title "Grid preprocessor"
 # compile appropriate code 
 echo ${case_switch_ser} > ${path_b}/switch
 ${path_b}/w3_make ww3_grid
+cp ${path_e}/ww3_grid ${path_exe}/
 
 rm -f mod_def.*
 path_grid="${toolbox_dir}/grid_inp"
 cp ${path_grid}/${gridtype}_bottom.inp ./
 cp ${path_grid}/${gridtype}_mapsta.inp ./
-if [ "${gridtype}" != "ww3a" ]; then
-	cp ${path_grid}/${gridtype}_x.inp ./
-	cp ${path_grid}/${gridtype}_y.inp ./
+if [[ ${gridtype} != ww3a ]]; then
+	cp ${path_grid}/${gridtype}_[xy].inp ./
 fi
 cp ${path_grid}/ww3_grid.inp.${gridtype} ./ww3_grid.inp
 
-echo "  Screen output routed to ${path_o}/ww3_grid.out"
-${path_e}/ww3_grid > ${path_o}/ww3_grid.out
+echo "  Screen output routed to ${path_out}/ww3_grid.out"
+${path_exe}/ww3_grid > ${path_out}/ww3_grid.out
 mkdir -p grid_inp
-mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ${gridtype}_x.inp \
-	${gridtype}_y.inp ww3_grid.inp ${path_w}/grid_inp
+mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ww3_grid.inp ${path_work}/grid_inp
+if [[ ${gridtype} != ww3a ]]; then
+	mv ${gridtype}_[xy].inp ${path_work}/grid_inp
+fi
 
 # check error
 check_error "Error in Step 1. Stop..."
@@ -181,7 +185,7 @@ check_error "Error in Step 1. Stop..."
 print_title "Initial conditions"
 
 if [[ ${f_restart} == yes ]]; then
-	file_res="${path_r}/restart_${date_beg}.ww3"
+	file_res="${path_res}/restart_${date_beg}.ww3"
 	if [[ -e ${file_res} ]]; then
 		echo "Restarting run from ${file_res}..."
 		cp ${file_res} ./restart.ww3
@@ -194,11 +198,12 @@ else
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_strt
+	cp ${path_e}/ww3_strt ${path_exe}/
 	path_strt="${toolbox_dir}/strt_inp"
 	cp ${path_strt}/ww3_strt.inp ./
 
-	echo "  Screen output routed to ${path_o}/ww3_strt.out"
-	${path_e}/ww3_strt > ${path_o}/ww3_strt.out
+	echo "  Screen output routed to ${path_out}/ww3_strt.out"
+	${path_exe}/ww3_strt > ${path_out}/ww3_strt.out
 	mkdir -p strt_inp
 	mv ww3_strt.inp strt_inp/
 fi
@@ -214,23 +219,24 @@ if [[ ${f_input} == yes ]]; then
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
+	cp ${path_e}/ww3_prnc ${path_exe}
 	path_prnc="${toolbox_dir}/prnc_inp"
 
 	# prepare input fields
 	# wind
-	ln -s ${path_d}/wind.nc ./
+	ln -s ${path_dat}/wind.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
-	echo "  Screen output routed to ${path_o}/ww3_prnc_wind.out"
-	${path_e}/ww3_prnc > ${path_o}/ww3_prnc_wind.out
+	echo "  Screen output routed to ${path_out}/ww3_prnc_wind.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_wind.out
 	mkdir -p prnc_inp
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
 	rm wind.nc
 	
 	# ice
-	ln -s ${path_d}/ice.nc ./
+	ln -s ${path_dat}/ice.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.ice ./ww3_prnc.inp
-	echo "  Screen output routed to ${path_o}/ww3_prnc_ice.out"
-	${path_e}/ww3_prnc > ${path_o}/ww3_prnc_ice.out
+	echo "  Screen output routed to ${path_out}/ww3_prnc_ice.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_ice.out
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
 	rm ice.nc
 	
@@ -248,6 +254,7 @@ else
 	echo ${case_switch_ser} > ${path_b}/switch
 fi
 ${path_b}/w3_make ww3_shel
+cp ${path_e}/ww3_shel ${path_exe}/
 
 # processing input file
 path_shel="${toolbox_dir}/shel_inp"
@@ -268,6 +275,7 @@ print_title "Gridded netCDF output post-processor"
 # compile appropriate code
 echo ${case_switch_ser} > ${path_b}/switch
 ${path_b}/w3_make ww3_ounf
+cp ${path_e}/ww3_ounf ${path_exe}/
 
 # processing input file
 path_ounf="${toolbox_dir}/ounf_inp"
@@ -362,33 +370,33 @@ if [[ ${f_mpi} == yes ]]; then
 # mpi run
 	if [[ ${HOSTNAME} == yslogin* ]]; then
 		cat >> submit.sh << EOF
-cd ${path_w}
-${exempi} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+cd ${path_work}
+${exempi} ${path_exe}/ww3_shel > ${path_out}/ww3_shel.out
 ./postproc.sh
 EOF
 	elif [[ ${HOSTNAME} == cheyenne* ]]; then
 		cat >> submit.sh << EOF
-cd ${path_w}
-${exempi} ${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+cd ${path_work}
+${exempi} ${path_e}/ww3_shel > ${path_out}/ww3_shel.out
 qsub -W depend=afterok:\$PBS_JOBID ./postproc.sh
 EOF
 	fi
 # single processor run
 else
 	cat >> submit.sh << EOF
-cd ${path_w}
-${path_e}/ww3_shel > ${path_o}/ww3_shel.out
+cd ${path_work}
+${path_e}/ww3_shel > ${path_out}/ww3_shel.out
 ./postproc.sh
 EOF
 fi
 
 # command for postprocessing script
 cat >> postproc.sh << EOF
-echo "  Log files routed to ${path_o}"
-mv log.* ${path_o}/
+echo "  Log files routed to ${path_out}"
+mv log.* ${path_out}/
 mv ww3_shel.inp shel_inp/
 
-${path_e}/ww3_ounf > ${path_o}/ww3_ounf.out
+${path_exe}/ww3_ounf > ${path_out}/ww3_ounf.out
 mv ww3_ounf.inp ounf_inp/
 mv ww3.*.nc out/
 mv ${sav_res} restart/${rname_res}
