@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+#
+# This script plot the cost of simulations
+# download the files if stored remotely 
+#
+# Qing Li, 20170620
+
+import sys
+import os
+import numpy as np
+from astropy.io import ascii
+import matplotlib.pyplot as plt
+import subprocess as sp
+
+def main():
+    """
+    Read log.ww3, extract elapsed time, plot cost of simulations
+    """
+    scratch = '/glade/scratch/qingli/wwatch3v5p16'
+    scratch_l = '/Users/qingli/scratch/wwatch3v5p16'
+    gridlist = ('ww3a', 'gx37', 'gx16')
+    gridx = np.asarray([90, 100, 320])
+    gridy = np.asarray([50, 116, 384])
+    gridsea = np.asarray([2963, 7911, 86212])
+    caselist = ('01', '02', '03', '05')
+    proclist = np.asarray([4, 8, 16, 64])
+    yyyymm = '200907'
+    nday = 31
+
+    ng = len(gridlist)
+    nc = len(caselist)
+
+    ww3_cost = np.zeros([ng, nc])
+    ww3_cputime = np.zeros([ng, nc])
+    ww3_cpug = np.zeros([ng, nc])
+    for i in range(0, ng):
+        for j in range(0, nc):
+            casename = 'run'+caselist[j]+'_'+yyyymm+'_'+gridlist[i]
+            infile = scratch+'/'+casename+'/out/log.ww3'
+            infile_l = scratch_l+'/'+casename+'/out/log.ww3'
+            if os.path.isfile(infile):
+                ww3_cost[i, j] = get_elapsed_time(infile)/nday
+                ww3_cputime[i, j] = get_elapsed_time(infile)*proclist[j]/nday
+                ww3_cpug[i, j] = get_elapsed_time(infile)*proclist[j]/gridsea[i]
+            elif os.path.isfile(infile_l):
+                ww3_cost[i, j] = get_elapsed_time(infile_l)/nday
+                ww3_cputime[i, j] = get_elapsed_time(infile_l)*proclist[j]/nday
+                ww3_cpug[i, j] = get_elapsed_time(infile_l)*proclist[j]/gridsea[i]
+            else:
+                ww3_cost[i, j] = None
+                ww3_cputime[i, j] = None
+                ww3_cpug[i, j] = None
+
+    #print(ww3_cost)
+    plt.plot(proclist, ww3_cost[0,:], '-kx', lw=1.5, label=gridlist[0])
+    plt.plot(proclist, ww3_cost[1,:], '-bo', lw=1.5, label=gridlist[1])
+    xx = proclist[~np.isnan(ww3_cost[2,:])]
+    yy = ww3_cost[2, ~np.isnan(ww3_cost[2,:])]
+    plt.plot(xx, yy, '-r*', lw=1.5, label=gridlist[2])
+    plt.xlabel('Number of processors')
+    plt.ylabel('Elapsed time in second per simulated day')
+    plt.yscale('log')
+    plt.xlim([2, 66])
+    plt.legend(loc='lower right')
+    #plt.show()
+    plt.savefig('elapsedtime.pdf')
+    plt.clf()
+
+    plt.plot(proclist, ww3_cputime[0,:], '-kx', lw=1.5, label=gridlist[0])
+    plt.plot(proclist, ww3_cputime[1,:], '-bo', lw=1.5, label=gridlist[1])
+    xx = proclist[~np.isnan(ww3_cputime[2,:])]
+    yy = ww3_cputime[2, ~np.isnan(ww3_cputime[2,:])]
+    plt.plot(xx, yy, '-r*', lw=1.5, label=gridlist[2])
+    plt.plot(proclist, ww3_cputime[0,:]*gridx[1]*gridy[1]/gridx[0]/gridy[0], '--bo', lw=0.75)
+    plt.plot(proclist, ww3_cputime[0,:]*gridx[2]*gridy[2]/gridx[0]/gridy[0], '--r*', lw=0.75)
+    plt.xlabel('Number of processors')
+    plt.ylabel('CPU time in second per simulated day')
+    plt.yscale('log')
+    plt.xlim([2, 66])
+    plt.legend(loc='lower right')
+    #plt.show()
+    plt.savefig('cputime.pdf')
+    plt.clf()
+
+    ngx16 = np.nanmean(ww3_cputime[2,:])/np.nanmean(ww3_cputime[0,:])
+    ngx37 = np.nanmean(ww3_cputime[1,:])/np.nanmean(ww3_cputime[0,:])
+    print('CPU time with gx16 is {} times greater than with ww3a'.format(ngx16))
+    print('CPU time with gx37 is {} times greater than with ww3a'.format(ngx37))
+
+def get_elapsed_time(logfile):
+    """
+    Read elapsed time from the last line of the log file
+    """
+
+    # read last line
+    with open(logfile, 'r') as fin:
+        for line in fin:
+            pass
+        last = line.split()
+        return float(last[3])
+
+
+if __name__ == "__main__":
+    main()
