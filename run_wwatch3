@@ -10,7 +10,7 @@
 ## Run control ----------------------------------------------------------------
 # case name
 gridtype="gx16"  # grid type: gx16 or gx37 or ww3a
-casename="run05_200907_${gridtype}"
+casename="icefree_200907_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
@@ -21,15 +21,17 @@ dtrs="86400"             # restart interval
 
 # restart run or not
 f_restart="no"
-# update input file or not
-f_input="yes"
 # clean old exes and build new ones
-f_new="yes"
+f_new="no"
+# update grid
+f_grid="no"
+# input file options: update, copy, none
+opt_input="copy"
 
 # number of processors
 nproc=16
 # wall time (hh:mm)
-walltime="00:30"
+walltime="02:00"
 # queue (small, regular, economy)
 queue="regular"
 # project number
@@ -127,7 +129,8 @@ path_work="${tmp_dir}/${casename}"  # work directory
 path_dat="${toolbox_dir}/data"     # input data directory
 path_out="${path_work}/out"           # output directory
 path_res="${path_work}/restart"       # restart directory
-path_exe="${path_work}/exe"
+path_exe="${path_work}/exe"        # directory executables for each case
+path_input="${tmp_dir}/data"       # input data directory for copy
 
 # setup work directory
 mkdir -p ${path_work}
@@ -154,32 +157,34 @@ fi
 check_error "Error in Step 0. Stop..."
 
 ## 1. Grid pre-processor ------------------------------------------------------
-print_title "Grid preprocessor"
+if [[ ${f_grid} == yes ]]; then
+	print_title "Grid preprocessor"
 
-# compile appropriate code 
-echo ${case_switch_ser} > ${path_b}/switch
-${path_b}/w3_make ww3_grid
-cp ${path_e}/ww3_grid ${path_exe}/
+	# compile appropriate code
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_grid
+	cp ${path_e}/ww3_grid ${path_exe}/
 
-rm -f mod_def.*
-path_grid="${toolbox_dir}/grid_inp"
-cp ${path_grid}/${gridtype}_bottom.inp ./
-cp ${path_grid}/${gridtype}_mapsta.inp ./
-if [[ ${gridtype} != ww3a ]]; then
-	cp ${path_grid}/${gridtype}_[xy].inp ./
+	rm -f mod_def.*
+	path_grid="${toolbox_dir}/grid_inp"
+	cp ${path_grid}/${gridtype}_bottom.inp ./
+	cp ${path_grid}/${gridtype}_mapsta.inp ./
+	if [[ ${gridtype} != ww3a ]]; then
+		cp ${path_grid}/${gridtype}_[xy].inp ./
+	fi
+	cp ${path_grid}/ww3_grid.inp.${gridtype} ./ww3_grid.inp
+
+	echo "  Screen output routed to ${path_out}/ww3_grid.out"
+	${path_exe}/ww3_grid > ${path_out}/ww3_grid.out
+	mkdir -p grid_inp
+	mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ww3_grid.inp ${path_work}/grid_inp
+	if [[ ${gridtype} != ww3a ]]; then
+		mv ${gridtype}_[xy].inp ${path_work}/grid_inp
+	fi
+	# check error
+	check_error "Error in Step 1. Stop..."
+
 fi
-cp ${path_grid}/ww3_grid.inp.${gridtype} ./ww3_grid.inp
-
-echo "  Screen output routed to ${path_out}/ww3_grid.out"
-${path_exe}/ww3_grid > ${path_out}/ww3_grid.out
-mkdir -p grid_inp
-mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ww3_grid.inp ${path_work}/grid_inp
-if [[ ${gridtype} != ww3a ]]; then
-	mv ${gridtype}_[xy].inp ${path_work}/grid_inp
-fi
-
-# check error
-check_error "Error in Step 1. Stop..."
 
 ## 2. Initial conditions ------------------------------------------------------
 print_title "Initial conditions"
@@ -213,7 +218,7 @@ check_error "Error in Step 2. Stop..."
 
 ## 3. Input fields ------------------------------------------------------------
 # update input files
-if [[ ${f_input} == yes ]]; then
+if [[ ${opt_input} == update ]]; then
 	print_title "Input fields"
 
 	# compile appropriate code 
@@ -242,6 +247,14 @@ if [[ ${f_input} == yes ]]; then
 	
 	# check error
 	check_error "Error in Step 3. Stop..."
+elif [[ ${opt_input} == copy ]]; then
+	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
+	ln -s ${path_input}/${gridtype}_ice.ww3 ./ice.ww3
+elif [[ ${opt_input} == none ]]; then
+	echo "Do nothing on input file. Please make sure wind.ww3 and ice.ww3 exist."
+else
+	echo "Invalid input option ${opt_input}. Stop."
+	exit 1
 fi
 
 ## 4. Main program ------------------------------------------------------------
