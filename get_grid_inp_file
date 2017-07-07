@@ -15,7 +15,7 @@ def main():
         and bottom depth to txt files for ww3_grid.inp
     """
     # check input
-    gridlist = ('gx37', 'gx16')
+    gridlist = ('gx37', 'gx16', 'gx16b')
     varargin = sys.argv
     narg = len(varargin)
     if narg > 2:
