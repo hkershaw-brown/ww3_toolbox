@@ -79,7 +79,7 @@ def write_inp(dat, outfile):
         outfile: output filename
     """
     print('Output file: {}'.format(outfile))
-    ascii.write(dat, outfile, format='no_header', overwrite=True)
+    ascii.write(dat, outfile, format='no_header')
 
 if __name__ == "__main__":
     main()

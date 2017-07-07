@@ -16,12 +16,15 @@ begin
 
 ; read and regrid region mask
 	rmask		= f->REGION_MASK
+	ht 		= f->HT
 	rmask_new	= rmask
 	rmask_new	= where(rmask .lt. 0,   0, rmask_new)
 	rmask_new	= where(rmask .eq. 4,   0, rmask_new)
 	rmask_new	= where(rmask .eq. 7,   0, rmask_new)
 	rmask_new(376:377,193:237) = 0
+	ht 		= where(rmask_new .eq. 0, 0.0, ht)
 
 	f->REGION_MASK	= (/rmask_new/)
+	f->HT 		= (/ht/)
 
 end 
