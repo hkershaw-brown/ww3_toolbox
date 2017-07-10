@@ -30,6 +30,9 @@ begin
 	nlt9 	= sum(where(dxm .lt. 9, 1, 0))
 	print(nlt9)
 
+	l_plot = 0
+
+if (l_plot .eq. 1) then
 	polar = "NH"
 
 ; open workstation
@@ -73,7 +76,7 @@ begin
 
 ; plot
 ; define parameters
-	type	= "ps"  ; plot type
+	type	= "pdf"  ; plot type
 	type@wkPaperWidthF  = 6
 	type@wkPaperHeightF = 6
 	;type	= "x11"
@@ -82,5 +85,6 @@ begin
 	plot = gsn_csm_contour_map_polar(wks, dxm, res)
 	draw(plot)
 	frame(wks)
+end if
 
 end 
