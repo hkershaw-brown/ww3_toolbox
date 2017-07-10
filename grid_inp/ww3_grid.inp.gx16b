@@ -24,7 +24,7 @@ $ - Time step information (this information is always read)
 $     maximum global time step, maximum CFL time step for x-y and
 $     k-theta, minimum source term time step (all in seconds).
 $
-  1800.00  1800.00  1800.00   300.00
+  1800.00  450.00  900.00   15.00
 $
 $ Start of namelist input section ------------------------------------ $
 $
