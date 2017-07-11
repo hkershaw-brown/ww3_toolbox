@@ -1,0 +1,23 @@
+#!/bin/bash
+# This script gets sea ice fraction and sea ice thickness from 
+# CESM CICE output
+#
+# Qing Li, 20170711
+
+casename=b1850_f19_gx1_ctrl
+datadir=/glade/u/home/qingli/SCRATCH/archive/${casename}/ice/hist
+yyyy=100
+yyyy_str=`printf '%04d' ${yyyy}`
+vars='aice,hi,TLON,TLAT,time'
+outdir='./data'
+outdata=${casename}_cice_${yyyy_str}.nc
+
+for mm in {1..12}; do
+	mm_str=`printf '%02d' ${mm}`
+	infile=${casename}.cice.h.${yyyy_str}-${mm_str}.nc
+	outfile=tmp.${mm_str}.nc
+	ncks -O -h -v ${vars} ${datadir}/${infile} ${outfile}
+done
+
+ncrcat -O -h tmp.??.nc ${outdir}/${outdata}
+rm tmp.??.nc

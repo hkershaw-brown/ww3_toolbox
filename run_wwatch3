@@ -9,29 +9,29 @@
 
 ## Run control ----------------------------------------------------------------
 # case name
-gridtype="gx16"  # grid type: gx16 or gx37 or ww3a
-casename="icefree_200907_${gridtype}"
+gridtype="gx16b"  # grid type: gx16 or gx37 or ww3a
+casename="testIce_200901_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
-t_beg="20090701 000000"  # first output
-t_end="20090731 000000"  # last output
+t_beg="20090101 000000"  # first output
+t_end="20090106 000000"  # last output
 dt="21600"               # output interval
 dtrs="86400"             # restart interval
 
 # restart run or not
 f_restart="no"
 # clean old exes and build new ones
-f_new="no"
+f_new="yes"
 # update grid
-f_grid="no"
-# input file options: update, copy, none
-opt_input="copy"
+f_grid="yes"
+# input file options: update, copy, testIce, none
+opt_input="testIce"
 
 # number of processors
-nproc=16
+nproc=64
 # wall time (hh:mm)
-walltime="02:00"
+walltime="01:00"
 # queue (small, regular, economy)
 queue="regular"
 # project number
@@ -39,7 +39,7 @@ queue="regular"
 
 # set switch
 case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
-"NL1 TR0 BS0 IC0 IS0 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
+"NL1 TR0 BS0 IC2 IS2 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
 case_switch_ser="${case_switch_base} SHRD"
 case_switch_mpi="${case_switch_base} MPI DIST"
 
@@ -110,7 +110,7 @@ nres=$(( ${nsec}/${dtrs} ))
 if [[ ${gridtype} == gx37 ]]; then
 	nx=100
 	ny=116
-elif [[ ${gridtype} == gx16 ]]; then
+elif [[ ${gridtype} == gx16* ]]; then
 	nx=320
 	ny=384
 elif [[ ${gridtype} == ww3a ]]; then
@@ -250,6 +250,21 @@ if [[ ${opt_input} == update ]]; then
 elif [[ ${opt_input} == copy ]]; then
 	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
 	ln -s ${path_input}/${gridtype}_ice.ww3 ./ice.ww3
+elif [[ ${opt_input} == testIce ]]; then
+	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
+	# ice fraction
+	ln -s ${path_dat}/b1850_f19_gx1_ctrl_cice_0100.nc ./
+	cp ${path_prnc}/ww3_prnc.inp.cice.ice ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ice.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ice.out
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ice.inp
+	# ice thickness
+	cp ${path_prnc}/ww3_prnc.inp.cice.ic1 ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ic1.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ic1.out
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ic1.inp
+	rm b1850_f19_gx1_ctrl_cice_0100.nc
+	exit 2
 elif [[ ${opt_input} == none ]]; then
 	echo "Do nothing on input file. Please make sure wind.ww3 and ice.ww3 exist."
 else
