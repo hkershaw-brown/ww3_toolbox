@@ -17,10 +17,11 @@ begin
 
 ; define file names
 	gtype   = "gx16b"
-	casen	= "icefree7_200907_"+gtype
+	yyyymm  = "200901"
+	casen	= "icefree7_"+yyyymm+"_"+gtype
 	datadir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
 	diri	= datadir+casen+"/out/"
-	fili	= "ww3_icefree_200907.nc" 
+	fili	= "ww3_icefree_"+yyyymm+".nc"
 	f	= addfile(diri+fili,"r")
 
 ; set variables

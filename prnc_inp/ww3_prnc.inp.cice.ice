@@ -28,13 +28,13 @@ $   Header flag  : If true, header is added to file.
 $                  (necessary for reading, FALSE is used only for
 $                   incremental generation of a data file.)
 $
-  'ICE' 'AI' T T
+  'ICE' 'LL' T T
 $
 $ Name of spatial dimensions------------------------------------------ $
 $ NB: time dimension is expected to be called 'time' and must respect 
 $     Julian or Gregorian calendar with leap day.
 $
- TLON TLAT
+ lon lat
 $
 $ Variables to use --------------------------------------------------- $
 $
@@ -48,7 +48,7 @@ $
 $ Define data files -------------------------------------------------- $
 $ The input line identifies the filename using for the forcing field.
 $
-  'b1850_f19_gx1_ctrl_cice_0100.nc'
+  'b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc'
 $
 $ -------------------------------------------------------------------- $
 $ End of input file                                                    $

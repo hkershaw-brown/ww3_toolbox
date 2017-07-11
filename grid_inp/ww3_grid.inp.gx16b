@@ -4,7 +4,7 @@ $ -------------------------------------------------------------------- $
 $
 $ Grid name (C*30, in quotes)
 $
-  'POP 1 degree grid (gx1v6)     '
+  'POP 1 degree grid (gx1v6b)     '
 $
 $ Frequency increment factor and first frequency (Hz) ---------------- $
 $ number of frequencies (wavenumbers) and directions, relative offset

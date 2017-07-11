@@ -5,14 +5,14 @@ $ Define input to be used with F/T/C flag for use or nor or coupling and
 $ T/F flag for definition as a homogeneous field.
 $
 $ Include ice and mud parameters only if IC1/2/3/4 used :
-$   F F     Ice parameter 1
-$   F F     Ice parameter 2
-$   F F     Ice parameter 3
-$   F F     Ice parameter 4
-$   F F     Ice parameter 5
-$   F F     Mud parameter 1
-$   F F     Mud parameter 2
-$   F F     Mud parameter 3
+   T F     Ice parameter 1
+   F F     Ice parameter 2
+   F F     Ice parameter 3
+   F F     Ice parameter 4
+   F F     Ice parameter 5
+   F F     Mud parameter 1
+   F F     Mud parameter 2
+   F F     Mud parameter 3
    F F     Water levels
    F F     Currents
    T F     Winds

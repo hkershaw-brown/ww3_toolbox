@@ -6,7 +6,7 @@
 
 casename=b1850_f19_gx1_ctrl
 datadir=/glade/u/home/qingli/SCRATCH/archive/${casename}/ice/hist
-yyyy=100
+yyyy=99
 yyyy_str=`printf '%04d' ${yyyy}`
 vars='aice,hi,TLON,TLAT,time'
 outdir='./data'
@@ -20,4 +20,6 @@ for mm in {1..12}; do
 done
 
 ncrcat -O -h tmp.??.nc ${outdir}/${outdata}
+ncatted -O -a units,time,o,c,"days since 1910-12-24 00:00:00" ${outdir}/${outdata}
+ncatted -O -a calendar,time,o,c,"gregorian" ${outdir}/${outdata}
 rm tmp.??.nc

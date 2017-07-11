@@ -15,14 +15,14 @@ casename="testIce_200901_${gridtype}"
 # run times
 # (nonzero hhmmss not supported)
 t_beg="20090101 000000"  # first output
-t_end="20090106 000000"  # last output
+t_end="20090131 000000"  # last output
 dt="21600"               # output interval
 dtrs="86400"             # restart interval
 
 # restart run or not
 f_restart="no"
 # clean old exes and build new ones
-f_new="yes"
+f_new="no"
 # update grid
 f_grid="yes"
 # input file options: update, copy, testIce, none
@@ -251,20 +251,31 @@ elif [[ ${opt_input} == copy ]]; then
 	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
 	ln -s ${path_input}/${gridtype}_ice.ww3 ./ice.ww3
 elif [[ ${opt_input} == testIce ]]; then
+	print_title "Input fields"
+
+	# compile appropriate code 
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_prnc
+	cp ${path_e}/ww3_prnc ${path_exe}
+	path_prnc="${toolbox_dir}/prnc_inp"
+	
+	# copy wind
 	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
+	
 	# ice fraction
-	ln -s ${path_dat}/b1850_f19_gx1_ctrl_cice_0100.nc ./
+	ln -s ${path_dat}/b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.cice.ice ./ww3_prnc.inp
 	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ice.out"
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ice.out
+	mkdir -p prnc_inp
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ice.inp
+	
 	# ice thickness
 	cp ${path_prnc}/ww3_prnc.inp.cice.ic1 ./ww3_prnc.inp
 	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ic1.out"
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ic1.out
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ic1.inp
-	rm b1850_f19_gx1_ctrl_cice_0100.nc
-	exit 2
+	rm b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc
 elif [[ ${opt_input} == none ]]; then
 	echo "Do nothing on input file. Please make sure wind.ww3 and ice.ww3 exist."
 else
