@@ -15,7 +15,7 @@ def main():
         and bottom depth to txt files for ww3_grid.inp
     """
     # check input
-    gridlist = ('gx37', 'gx16', 'gx16b')
+    gridlist = ('gx37', 'gx16', 'gx16b', 'gx16b_np', 'gx16b_sp')
     varargin = sys.argv
     narg = len(varargin)
     if narg > 2:
@@ -27,7 +27,8 @@ def main():
     # read data
     gridpath = '.'
     inppath = './grid_inp'
-    infile = gridpath+'/'+gridtype+'.grids.nc'
+    gridname = gridtype.split('_')[0]
+    infile = gridpath+'/'+gridname+'.grids.nc'
     ncfile = Dataset(infile,'r')
     nlat = ncfile.dimensions['nlat'].size
     nlon = ncfile.dimensions['nlon'].size
@@ -36,41 +37,86 @@ def main():
     print('Input file: {}'.format(infile))
 
     # save x-coord, y-coord, bottom
-    save_var(ncfile, 'TLONG', inppath+'/'+gridtype+'_x.inp')
-    save_var(ncfile, 'TLAT',  inppath+'/'+gridtype+'_y.inp')
-    save_var(ncfile, 'HT',    inppath+'/'+gridtype+'_bottom.inp', 0.01)
-    save_var(ncfile, 'REGION_MASK', inppath+'/'+gridtype+'_mapsta.inp', 0)
+    if gridtype == 'gx16b_np':
+        cutofflat = 45.0
+    elif gridtype == 'gx16b_sp':
+        cutofflat = -45.0
+    else:
+        cutofflat = None
+
+    save_var(ncfile, 'TLONG', inppath+'/'+gridtype+'_x.inp', clat=cutofflat)
+    save_var(ncfile, 'TLAT',  inppath+'/'+gridtype+'_y.inp', clat=cutofflat)
+    save_var(ncfile, 'HT',    inppath+'/'+gridtype+'_bottom.inp', fscale=0.01, clat=cutofflat)
+    save_var(ncfile, 'REGION_MASK', inppath+'/'+gridtype+'_mapsta.inp', fscale=0, clat=cutofflat)
     print('----')
     ncfile.close()
 
-def save_var(ncfile, varname, outfile, fscale=1):
+def save_var(ncfile, varname, outfile, fscale=1, clat=None):
     """
     Read in variable 'varname' from file 'ncfile' and write it in
         txt file 'outfile'
         fscale is optional: 0 - set non zero values in dat to 1
                             1 - do nothing
                             otherwise - set dat to dat * fscale
+        clat is optional: =0 - global
+                          >0 and <90 - north pole region cutoff to latitude clat
+                          <0 and >-90 - sorth pole region cutoff to latitude clat
+                          [clat[0], clat[1]] - regions between latitudes clat[0] and clat[1]
     """
     nlat = ncfile.dimensions['nlat'].size
     nlon = ncfile.dimensions['nlon'].size
-    dat = ncfile.variables[varname][:]
-    if fscale == 0:
-        dat = np.where(dat != 0, 1, 0)
-    elif fscale != 1:
-        dat = dat * fscale
+    tmp1 = ncfile.variables[varname][:]
+    tmp2 = ncfile.variables['TLAT'][:]
 
-    datasize = dat.shape
+    # check dimension
+    datasize = tmp1.shape
     if len(datasize) != 2:
         raise ValueError('Dimension of data should be 2')
+
+    ndatx = tmp1.shape[1]
+    ndaty = tmp1.shape[0]
+    if ndatx == nlon and ndaty == nlat:
+        dat0 = tmp1
+        lat = tmp2
+    elif ndatx == nlat and ndaty == nlon:
+        dat0 = tmp1.transpose()
+        lat = tmp2.transpose()
     else:
-        ndatx = dat.shape[1]
-        ndaty = dat.shape[0]
-        if ndatx == nlon and ndaty == nlat:
-            write_inp(dat, outfile)
-        elif ndatx == nlat and ndaty == nlon:
-            write_inp(dat.transpose(), outfile)
+        raise ValueError('Dimensions not match')
+
+    # scale data if applicable
+    if fscale == 0:
+        dat0 = np.where(dat0 != 0, 1, 0)
+    elif fscale != 1:
+        dat0 = dat0 * fscale
+
+    # set mininum and maximum latitde
+    if clat is None:
+        minlat = -90.0
+        maxlat = 90.0
+    elif np.size(clat) == 1:
+        if clat > 0.0:
+            minlat = clat
+            maxlat = 90.0
         else:
-            raise ValueError('Dimensions not match')
+            minlat = -90.0
+            maxlat = clat
+    elif np.size(clat) == 2:
+        minlat = clat[0]
+        maxlat = clat[1]
+
+    # check minlat an maxlat
+    if minlat < -90.0 or maxlat > 90.0:
+        raise ValueError('Invalid cutoff latitude')
+
+    # apply mask on dat
+    dat = np.ma.where((lat>minlat) & (lat<maxlat), dat0, -9999.9)
+
+    for i in range(ndaty):
+        if np.any(np.equal(dat[i,:], -9999.9)):
+            dat[i,:] = None
+
+    write_inp(dat, outfile)
 
 def write_inp(dat, outfile):
     """
