@@ -6,23 +6,47 @@ Tools include:
 
 * **run_wwatch3**
 
-Setup, compile and submit jobs to run WW3 on Yellowstone or Cheyenne.
+This Bash script sets up input files, compiles the code and submits jobs to run WW3 on Yellowstone or Cheyenne.
+
 
 * **get_grid_inp_file**
 
-Generate *ww3_grid* input data (x, y, bottom) for global grids *gx37* and *gx16*. Require `TLONG`, `TLAT`, `HT` and `REGION_MASK` stored in netCDF format, i.e., *gx37.grids.nc* and *gx16.grids.nc*.
+This Python script generates *ww3_grid* input data (x, y, bottom) for global grids *gx37* and *gx16*. Require `TLONG`, `TLAT`, `HT` and `REGION_MASK` stored in netCDF format, i.e., *gx37.grids.nc* and *gx16.grids.nc*.
+
 
 * **get_bottom_ww3a**
 
-Generate *ww3_grid* input data (bottom) for global grid *ww3a*. Bathymetry is taken from *gx16* and remapped on *ww3a* (area average).
+This Python script generates *ww3_grid* input data (bottom) for global grid *ww3a*. Bathymetry is taken from *gx16* and remapped on *ww3a* (area average).
+
 
 * **get_prnc_inp_file**
 
-Generate netCDF input field (wind and ice) for *ww3_prnc*.
+This Python script generates netCDF input field (wind and ice) for *ww3_prnc*.
+
 
 * **gen_grid_dot_inp**
 
-Generate ww3\_grid.inp   
+This Python generates ww3\_grid.inp
+
+
+* **curvilin2latlon.ncl**
+
+This NCL script remaps a netCDF file with curvilinear grid (such as *gx16*) to lat-lon grid.
+
+
+* **get_gx16b.ncl**
+
+This NCL script modifies the grid gx16 to exclude marginal seas and Nares Strait.
+
+
+* **get_cesm_cice**
+
+This Bash script prepares sea ice input files (sea ice fraction and thickness) from existing CICE output data.
+
+
+* **check_min_dx.ncl**
+
+This NCL script prints out the minimum dx in grid gx16b.
 
 
 ## gx16b

@@ -1,4 +1,4 @@
-; This script modify the grid gx16 to exclude marginal seas
+; This script modifies the grid gx16 to exclude marginal seas
 ; and Nares Strait
 ;
 ; Li Qing, 20170707
