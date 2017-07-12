@@ -166,7 +166,7 @@ if [[ ${f_grid} == yes ]]; then
 	cp ${path_e}/ww3_grid ${path_exe}/
 
 	rm -f mod_def.*
-	path_grid="${toolbox_dir}/grid_inp"
+	path_grid="${toolbox_dir}/grids/grid_inp"
 	cp ${path_grid}/${gridtype}_bottom.inp ./
 	cp ${path_grid}/${gridtype}_mapsta.inp ./
 	if [[ ${gridtype} != ww3a ]]; then

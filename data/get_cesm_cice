@@ -8,18 +8,26 @@ casename=b1850_f19_gx1_ctrl
 datadir=/glade/u/home/qingli/SCRATCH/archive/${casename}/ice/hist
 yyyy=99
 yyyy_str=`printf '%04d' ${yyyy}`
+# variables to extract
 vars='aice,hi,TLON,TLAT,time'
-outdir='./data'
+# output directory
+outdir='.'
+# output file name
 outdata=${casename}_cice_${yyyy_str}.nc
 
+# loop over months
 for mm in {1..12}; do
 	mm_str=`printf '%02d' ${mm}`
 	infile=${casename}.cice.h.${yyyy_str}-${mm_str}.nc
 	outfile=tmp.${mm_str}.nc
 	ncks -O -h -v ${vars} ${datadir}/${infile} ${outfile}
 done
-
+# concatenate files
 ncrcat -O -h tmp.??.nc ${outdir}/${outdata}
+
+# adjust time units and calendar (arbitrary)
 ncatted -O -a units,time,o,c,"days since 1910-12-24 00:00:00" ${outdir}/${outdata}
 ncatted -O -a calendar,time,o,c,"gregorian" ${outdir}/${outdata}
+
+# clean up
 rm tmp.??.nc

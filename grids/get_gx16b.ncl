@@ -9,7 +9,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
 begin
 
-	diri	= "./grids/"
+	diri	= "./"
 	filb	= "gx16.grids.nc" 
 	fili	= "gx16b.grids.nc"
 

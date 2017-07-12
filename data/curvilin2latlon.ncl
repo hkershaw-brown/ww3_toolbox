@@ -15,7 +15,7 @@ gTypeIn = "gx16b"
 ; destination grid
 gTypeOut = "0.5x0.5"
 ; input file
-inFile	= "./data/b1850_f19_gx1_ctrl_cice_0099.nc" 
+inFile	= "b1850_f19_gx1_ctrl_cice_0099.nc" 
 ; fields to be remapped
 vars = (/"aice", "hi"/)
 vlat = "TLAT"
@@ -26,7 +26,7 @@ intMethod = "bilinear"
 
 ; output files
 outFile = str_sub_str(inFile, ".nc", "_"+gTypeOut+".nc")
-dirGrid = "./grids"
+dirGrid = "../grids"
 srcGridIn = dirGrid+"/"+gTypeIn+".grids.nc"
 srcGridName = dirGrid+"/"+gTypeIn+"_SCRIP.nc"
 dstGridName = dirGrid+"/"+gTypeOut+"_SCRIP.nc"

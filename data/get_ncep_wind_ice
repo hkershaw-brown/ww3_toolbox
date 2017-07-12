@@ -18,7 +18,7 @@ def main():
     fname_u10 = 'ncep.u_10.T62.2009.20120412.nc'
     fname_v10 = 'ncep.v_10.T62.2009.20120412.nc'
     fname_ifrac = 'ssmi.ifrac.0.5x0.5.2009.20120420.nc'
-    out_path = './prnc_inp'
+    out_path = '.'
 
     # output time in days
     nday = 365

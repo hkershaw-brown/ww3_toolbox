@@ -25,7 +25,7 @@ def main():
         raise ValueError('Input grid type {} not supported'.format(gridtype))
 
     # read data
-    gridpath = './grids'
+    gridpath = '.'
     inppath = './grid_inp'
     infile = gridpath+'/'+gridtype+'.grids.nc'
     ncfile = Dataset(infile,'r')
