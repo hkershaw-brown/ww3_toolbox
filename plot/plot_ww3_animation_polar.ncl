@@ -18,10 +18,10 @@ begin
 ; define file names
 	gtype   = "gx16b"
 	yyyymm  = "200901"
-	casen	= "icefree7_"+yyyymm+"_"+gtype
+	casen	= "testIce_"+yyyymm+"_"+gtype
 	datadir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
 	diri	= datadir+casen+"/out/"
-	fili	= "ww3_icefree_"+yyyymm+".nc"
+	fili	= "ww3_"+yyyymm+".nc"
 	f	= addfile(diri+fili,"r")
 
 ; set variables
@@ -30,9 +30,10 @@ begin
 	maxlv 	= (/10/)
 	intlv	= (/0.25/)
 	nvar 	= dimsizes(vars)
+	l_ice   = True ; plot 15% and 85% ice line
 
 ; saved time step
-	svtstep = (/19, 119/)
+	svtstep = (/19, 68, 99, 119/)
 
 ; polar regions
 	polars  = (/"NH", "SH"/)
@@ -44,6 +45,15 @@ begin
 	time@calendar = "julian"
         nt = dimsizes(time)
 	ndsize  = dimsizes(dimsizes(lat))
+
+; read ice
+if (l_ice) then
+	ice	= f->ice
+	if (ndsize .eq. 2) then
+		ice@lat2d	= lat
+		ice@lon2d	= lon
+	end if
+end if
 	
 ; loop over variables
 do iv=0,nvar-1
@@ -101,6 +111,30 @@ do ip=0,npl-1
         res@lbLabelAutoStride		= True
         res@lbTitleFontHeightF 		= 0.013
 
+; for 15% ice line
+	if (l_ice) then
+		ires    = res
+		ires@cnLinesOn			= True  ; turn line on and fill off
+		ires@cnFillOn			= False
+		ires@cnLevelSelectionMode	= "ExplicitLevels"
+		ires@cnLevels			= (/0.15, 0.85/)   ; change contour interval
+		ires@cnLineColor 		= "white"
+		ires@cnLineThicknessF		= 2
+		ires@gsnLeftString		= ""    ; no string for plot2                                       
+		ires@gsnRightString		= ""
+		delete(ires@gsnPolar)       ; no longer in use for plot2
+		if (polar .eq. "NH") then
+			delete(ires@mpMinLatF)
+		else
+			delete(ires@mpMaxLatF)
+		end if
+		delete(ires@mpCenterLonF)
+		delete(ires@mpShapeMode)
+		delete(ires@cnMinLevelValF)
+		delete(ires@cnMaxLevelValF)
+		delete(ires@cnLevelSpacingF)
+	end if
+
 ; plot
 do it = 0, nt-1
 	it_str = sprinti("%03i", it) 
@@ -113,6 +147,10 @@ do it = 0, nt-1
 	gsn_define_colormap(wks, "BlGrYeOrReVi200")
 	res@gsnLeftString = time_str
 	plot=gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
+	if (l_ice) then
+		plot2 = gsn_csm_contour(wks,ice(it,:,:),ires)
+		overlay(plot,plot2)
+	end if
 	draw(plot)
 	frame(wks)
 	delete(wks)
