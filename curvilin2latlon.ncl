@@ -1,7 +1,8 @@
 ;
-; This script interpolates data from gx16 to 1dx1d
+; This script interpolates data from a curvilinear grid
+; to a lat-lon grid
 ;
-; Li Qing, 20170711
+; Qing Li, 20170711
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
@@ -9,83 +10,90 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 
 begin
-gtype_in = "gx16b"
-gtype_out = "0.5x0.5"
+; source grid
+gTypeIn = "gx16b"
+; destination grid
+gTypeOut = "0.5x0.5"
 ; input file
-infile	= "./data/b1850_f19_gx1_ctrl_cice_0099.nc" 
-; output file
-outfile	= "./data/b1850_f19_gx1_ctrl_cice_0099_"+gtype_out+".nc"
+inFile	= "./data/b1850_f19_gx1_ctrl_cice_0099.nc" 
+; fields to be remapped
 vars = (/"aice", "hi"/)
+vlat = "TLAT"
+vlon = "TLONG"
+vmask = "REGION_MASK"
+; interpolation method
+intMethod = "bilinear"
 
-;---Output (and input) files
-srcGridIn = "./grids/"+gtype_in+".grids.nc"
-srcGridName = "./grids/"+gtype_in+"_SCRIP.nc"
-dstGridName = "./grids/"+gtype_out+"_SCRIP.nc"
-wgtFileName = "./grids/"+gtype_in+"_to_"+gtype_out+".nc"
+; output files
+outFile = str_sub_str(inFile, ".nc", "_"+gTypeOut+".nc")
+dirGrid = "./grids"
+srcGridIn = dirGrid+"/"+gTypeIn+".grids.nc"
+srcGridName = dirGrid+"/"+gTypeIn+"_SCRIP.nc"
+dstGridName = dirGrid+"/"+gTypeOut+"_SCRIP.nc"
+wgtFileName = dirGrid+"/"+gTypeIn+"_to_"+gTypeOut+"_"+intMethod+".nc"
 
 if (.not. fileexists(srcGridName)) then
 ;----------------------------------------------------------------------
-; Convert original source gxXX grid to a SCRIP convention file.
+; convert original source curvilinear grid to a SCRIP convention file.
 ;----------------------------------------------------------------------
 	fg = addfile(srcGridIn,"r")
-	lat2d = fg->TLAT
-	lon2d = fg->TLONG     
-	rmask = fg->REGION_MASK
+	lat2d = fg->$vlat$
+	lon2d = fg->$vlon$    
+	rmask = fg->$vmask$
 	
-	Opt                = True
-	Opt@GridMask       = where(rmask .ne. 0, 1, 0)    ; use "Mask2D" in NCL V6.2.1 and earlier
-	Opt@ForceOverwrite = True
-	Opt@PrintTimings   = True
-	Opt@Title          = gtype_in
+	opt                = True
+	opt@GridMask       = where(rmask .ne. 0, 1, 0)
+	opt@ForceOverwrite = True
+	opt@PrintTimings   = True
+	opt@Title          = gTypeIn
 	
-	curvilinear_to_SCRIP(srcGridName, lat2d, lon2d, Opt)
+	curvilinear_to_SCRIP(srcGridName, lat2d, lon2d, opt)
 	
-	;---Clean up
-	delete(Opt)
+	; clean up
+	delete(opt)
 end if
 
 if (.not. fileexists(dstGridName)) then
 ;----------------------------------------------------------------------
-; Convert destination grid to a SCRIP convention file.
+; convert destination lat-lon grid to a SCRIP convention file.
 ;----------------------------------------------------------------------
-	Opt                = True
-	Opt@ForceOverwrite = True
-	Opt@PrintTimings   = True
-	Opt@Title          = gtype_out
+	opt                = True
+	opt@ForceOverwrite = True
+	opt@PrintTimings   = True
+	opt@Title          = gTypeOut
 	
-	latlon_to_SCRIP(dstGridName, gtype_out, Opt)
+	latlon_to_SCRIP(dstGridName, gTypeOut, opt)
 	
-	;---Clean up
-	delete(Opt)
+	; clean up
+	delete(opt)
 end if
 
 if (.not. fileexists(wgtFileName)) then
 ;----------------------------------------------------------------------
-; Generate the weights
+; generate the weights
 ;----------------------------------------------------------------------
-	Opt                      = True
-	Opt@InterpMethod         = "bilinear"     ; default
-	Opt@ForceOverwrite       = True
-	Opt@PrintTimings         = True
+	opt                      = True
+	opt@InterpMethod         = intMethod     ; default
+	opt@ForceOverwrite       = True
+	opt@PrintTimings         = True
 	
-	ESMF_regrid_gen_weights(srcGridName, dstGridName, wgtFileName, Opt)
+	ESMF_regrid_gen_weights(srcGridName, dstGridName, wgtFileName, opt)
 	
-	delete(Opt)
+	delete(opt)
 end if
 
-
 ; read in data
-f = addfile(infile,"r")
+f = addfile(inFile,"r")
 
-; output file
-system("/bin/rm -f "+outfile)
-out     = addfile(outfile,"c")
+; open output file
+system("/bin/rm -f "+outFile)
+out = addfile(outFile, "c")
 
 ;----------------------------------------------------------------------
-; Apply the weights to variables.
+; apply the weights to variables.
 ;----------------------------------------------------------------------
-Opt                = True
-Opt@PrintTimings   = True
+opt                = True
+opt@PrintTimings   = True
 
 ; loop over variables
 nvar = dimsizes(vars)
@@ -93,9 +101,10 @@ do iv = 0,nvar-1
 	; read variable
 	dat = f->$vars(iv)$
 	; remapping
-    	dat_rg = ESMF_regrid_with_weights(dat, wgtFileName, Opt)
-    	printVarSummary(dat_rg)
+	datRegrid = ESMF_regrid_with_weights(dat, wgtFileName, opt)
+	printVarSummary(datRegrid)
 	; save variable
-	out->$vars(iv)$	= dat_rg
+	out->$vars(iv)$	= datRegrid
 end do
+
 end
