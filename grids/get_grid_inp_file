@@ -15,7 +15,7 @@ def main():
         and bottom depth to txt files for ww3_grid.inp
     """
     # check input
-    gridlist = ('gx37', 'gx16', 'gx16b', 'gx16b_np', 'gx16b_sp', 'gx37_eq')
+    gridlist = ('gx37', 'gx37b', 'gx16', 'gx16b', 'gx16b_np', 'gx16b_sp', 'gx37b_eq')
     varargin = sys.argv
     narg = len(varargin)
     if narg > 2:
@@ -41,7 +41,7 @@ def main():
         latcutoff = 45.0
     elif gridtype == 'gx16b_sp':
         latcutoff = -45.0
-    elif gridtype == 'gx37_eq':
+    elif gridtype == 'gx37b_eq':
         latcutoff = [-50.0, 50.0]
     else:
         latcutoff = None
