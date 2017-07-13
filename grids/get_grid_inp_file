@@ -33,89 +33,111 @@ def main():
     nlat = ncfile.dimensions['nlat'].size
     nlon = ncfile.dimensions['nlon'].size
     print('----')
-    print('Grid: {}, (nx, ny) = ({}, {})'.format(gridtype, nlon, nlat))
+    print('Grid: {}'.format(gridtype))
     print('Input file: {}'.format(infile))
 
     # save x-coord, y-coord, bottom
     if gridtype == 'gx16b_np':
-        cutofflat = 45.0
+        latcutoff = 45.0
     elif gridtype == 'gx16b_sp':
-        cutofflat = -45.0
+        latcutoff = -45.0
     else:
-        cutofflat = None
+        latcutoff = None
 
-    save_var(ncfile, 'TLONG', inppath+'/'+gridtype+'_x.inp', clat=cutofflat)
-    save_var(ncfile, 'TLAT',  inppath+'/'+gridtype+'_y.inp', clat=cutofflat)
-    save_var(ncfile, 'HT',    inppath+'/'+gridtype+'_bottom.inp', fscale=0.01, clat=cutofflat)
-    save_var(ncfile, 'REGION_MASK', inppath+'/'+gridtype+'_mapsta.inp', fscale=0, clat=cutofflat)
+    # get mask
+    dmask = get_mask(ncfile, 'TLAT', latcutoff)
+
+    # save data
+    save_var(ncfile, 'TLONG', inppath+'/'+gridtype+'_x.inp', mask=dmask)
+    save_var(ncfile, 'TLAT',  inppath+'/'+gridtype+'_y.inp', mask=dmask)
+    save_var(ncfile, 'HT',    inppath+'/'+gridtype+'_bottom.inp', fscale=0.01, mask=dmask)
+    save_var(ncfile, 'REGION_MASK', inppath+'/'+gridtype+'_mapsta.inp', fscale=0, mask=dmask)
     print('----')
     ncfile.close()
 
-def save_var(ncfile, varname, outfile, fscale=1, clat=None):
+def get_mask(ncfile, latname, latcutoff):
+    """
+    Return a mask with True where lat in:
+        (latcutoff, 90) if latcutoff > 0,
+        (-90, latcutoff) if latcutoff < 0,
+        (latcutoff[0], latcutoff[1]) if latcutoff has two elements,
+        and False otherwise.
+    """
+    # read lat from file
+    lat = ncfile.variables['TLAT'][:]
+    ny = lat.shape[0]
+    # set mininum and maximum latitde
+    if latcutoff is None:
+        return None
+    elif np.size(latcutoff) == 1:
+        if latcutoff > 0.0:
+            minlat = latcutoff
+            maxlat = 90.0
+        else:
+            minlat = -90.0
+            maxlat = latcutoff
+    elif np.size(latcutoff) == 2:
+        minlat = latcutoff[0]
+        maxlat = latcutoff[1]
+    else:
+        raise ValueError('latcutoff should be a scaler or a list with two elements')
+
+    # check minlat an maxlat
+    if minlat < -90.0 or maxlat > 90.0:
+        raise ValueError('Invalid cutoff latitude')
+
+    # generate mask
+    dmask = np.ma.where((lat>minlat) & (lat<maxlat), True, False)
+
+    for i in range(ny):
+        if np.any(dmask[i,:]):
+            dmask[i,:] = True
+
+    return dmask
+
+def save_var(ncfile, varname, outfile, fscale=1, mask=None):
     """
     Read in variable 'varname' from file 'ncfile' and write it in
         txt file 'outfile'
         fscale is optional: 0 - set non zero values in dat to 1
                             1 - do nothing
                             otherwise - set dat to dat * fscale
-        clat is optional: =0 - global
-                          >0 and <90 - north pole region cutoff to latitude clat
-                          <0 and >-90 - sorth pole region cutoff to latitude clat
-                          [clat[0], clat[1]] - regions between latitudes clat[0] and clat[1]
+        mask is optional: None - no mask, global field
+                          Otherwise, should be in the same dimension as 'varname'
     """
     nlat = ncfile.dimensions['nlat'].size
     nlon = ncfile.dimensions['nlon'].size
-    tmp1 = ncfile.variables[varname][:]
-    tmp2 = ncfile.variables['TLAT'][:]
+    dat = ncfile.variables[varname][:]
 
     # check dimension
-    datasize = tmp1.shape
+    datasize = dat.shape
     if len(datasize) != 2:
         raise ValueError('Dimension of data should be 2')
 
-    ndatx = tmp1.shape[1]
-    ndaty = tmp1.shape[0]
-    if ndatx == nlon and ndaty == nlat:
-        dat0 = tmp1
-        lat = tmp2
-    elif ndatx == nlat and ndaty == nlon:
-        dat0 = tmp1.transpose()
-        lat = tmp2.transpose()
-    else:
+    ndatx = dat.shape[1]
+    ndaty = dat.shape[0]
+    if ndatx != nlon or ndaty != nlat:
         raise ValueError('Dimensions not match')
 
     # scale data if applicable
     if fscale == 0:
-        dat0 = np.where(dat0 != 0, 1, 0)
+        dat = np.where(dat != 0, 1, 0)
     elif fscale != 1:
-        dat0 = dat0 * fscale
+        dat = dat * fscale
 
-    # set mininum and maximum latitde
-    if clat is None:
-        minlat = -90.0
-        maxlat = 90.0
-    elif np.size(clat) == 1:
-        if clat > 0.0:
-            minlat = clat
-            maxlat = 90.0
-        else:
-            minlat = -90.0
-            maxlat = clat
-    elif np.size(clat) == 2:
-        minlat = clat[0]
-        maxlat = clat[1]
+    # apply mask if passed in
+    if not mask is None:
+        dat = np.where(mask, dat, None)
 
-    # check minlat an maxlat
-    if minlat < -90.0 or maxlat > 90.0:
-        raise ValueError('Invalid cutoff latitude')
-
-    # apply mask on dat
-    dat = np.ma.where((lat>minlat) & (lat<maxlat), dat0, -9999.9)
-
+    # delete Nones
+    yindices = []
     for i in range(ndaty):
-        if np.any(np.equal(dat[i,:], -9999.9)):
-            dat[i,:] = None
+        if np.all(np.equal(dat[i,:], None)):
+            yindices.append(i)
 
+    dat = np.delete(dat, yindices, 0)
+
+    # write out data
     write_inp(dat, outfile)
 
 def write_inp(dat, outfile):
@@ -124,8 +146,8 @@ def write_inp(dat, outfile):
         dat: 2 dimensional array of data
         outfile: output filename
     """
-    print('Output file: {}'.format(outfile))
-    ascii.write(dat, outfile, format='no_header')
+    print('Output file: {}, (nx, ny) = ({}, {})'.format(outfile, dat.shape[1], dat.shape[0]))
+    ascii.write(dat, outfile, format='no_header', overwrite=True)
 
 if __name__ == "__main__":
     main()
