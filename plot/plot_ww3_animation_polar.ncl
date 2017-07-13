@@ -111,7 +111,7 @@ do ip=0,npl-1
         res@lbLabelAutoStride		= True
         res@lbTitleFontHeightF 		= 0.013
 
-; for 15% ice line
+; for 15% and 85% ice fraction contours
 	if (l_ice) then
 		ires    = res
 		ires@cnLinesOn			= True  ; turn line on and fill off
@@ -119,7 +119,7 @@ do ip=0,npl-1
 		ires@cnLevelSelectionMode	= "ExplicitLevels"
 		ires@cnLevels			= (/0.15, 0.85/)   ; change contour interval
 		ires@cnLineColor 		= "white"
-		ires@cnLineThicknessF		= 2
+		ires@cnLineThicknessF		= 1.5
 		ires@gsnLeftString		= ""    ; no string for plot2                                       
 		ires@gsnRightString		= ""
 		delete(ires@gsnPolar)       ; no longer in use for plot2
@@ -163,7 +163,7 @@ end do
 	system(cmd)
 
 ; create gif
-	cmd = "convert -density 150 -delay 25 "+var+"_*.ps "+casen+"/"+var+"_200907_"+gtype+"_"+polar+".gif"
+	cmd = "convert -density 150 -delay 25 "+var+"_*.ps "+casen+"/"+var+"_"+yyyymm+"_"+gtype+"_"+polar+".gif"
 	system(cmd)
 
 ; save snapshots
