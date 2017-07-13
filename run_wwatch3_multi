@@ -1,0 +1,464 @@
+#!/bin/bash
+#
+# This script sets up and submits job of global WW3 simulation
+# using multiple grids on Yellowstone/Cheyenne.
+#
+# Qing Li, 20170713
+
+## Run control ----------------------------------------------------------------
+# case name
+gridtype="mww3a"  # grid type: mww3a
+if [[ ${gridtype} == mww3a ]]; then
+	grids="gx16b_sp gx37b_eq gx16b_np"  # combination of gx16b_sp, gx37b_eq and gx16b_np
+else
+	echo "Grid type ${gridtype} not supported. Stop."
+	exit 1
+fi
+casename="testMulti_200901_${gridtype}"
+
+# run times
+# (nonzero hhmmss not supported)
+t_beg="20090101 000000"  # first output
+t_end="20090131 000000"  # last output
+dt="21600"               # output interval
+dtrs="86400"             # restart interval
+
+# restart run or not
+f_restart="no"
+# clean old exes and build new ones
+f_new="yes"
+# update grid
+f_grid="yes"
+# input file options: update, copy, testIce, none
+opt_input="testIce"
+
+# number of processors
+nproc=64
+# wall time (hh:mm)
+walltime="01:00"
+# queue (small, regular, economy)
+queue="regular"
+# project number
+#projnum="UBRN0005"
+
+# set switch
+case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
+"NL1 TR0 BS0 IC2 IS2 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
+case_switch_ser="${case_switch_base} SHRD"
+case_switch_mpi="${case_switch_base} MPI DIST"
+
+# specify compiler string (as per in ww3_dir/bin options) here:
+compstr="Intel"
+
+# set directory
+tmp_dir="/glade/scratch/qingli/wwatch3v5p16"
+toolbox_dir="/glade/u/home/qingli/src/ww3_toolbox"
+
+# set environment
+export WWATCH3_NETCDF="NC4"
+if [[ ${HOSTNAME} == yslogin* ]]; then
+	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16"
+	projnum="UBRN0005"
+	export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
+elif [[ ${HOSTNAME} == cheyenne* ]]; then
+	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16_cheyenne"
+	projnum="P93300612"
+	export NETCDF_CONFIG="/glade/u/apps/ch/opt/netcdf/4.4.1.1/intel/16.0.3/bin/nc-config"
+else
+	echo "Machine ${HOSTNAME} not supported. Stop."
+	exit 1
+fi
+export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
+
+## functions ------------------------------------------------------------------
+check_error () {
+# stop if any error occurs
+	if [ $? -ne 0 ]; then
+		echo $1
+		exit 1
+	fi
+}
+
+print_title () {
+# print section title
+	nl=${#1}
+	str=`printf  '%.0s-' $(seq 1 $(( ${nl}+2 )))`
+	echo " "
+	echo " "
+	echo "  +${str}+"
+	echo "  | $1 |"
+	echo "  +${str}+"
+	echo " "
+	echo " "
+}
+
+## 0. Preprocessing -----------------------------------------------------------
+print_title "Preprocessing"
+
+if [[ ${nproc} -gt 1 ]]; then
+	# run ww3 in MPI mode
+	f_mpi="yes"
+else
+	f_mpi="no"
+fi
+
+# calculate the output file number
+date_beg=${t_beg:0:8}
+date_end=${t_end:0:8}
+nsec=$(( $(date --date=${date_end} +%s) - $(date --date=${date_beg} +%s) ))
+nday=$(( ${nsec}/86400 ))
+nfile=$(( ${nsec}/${dt} ))
+nres=$(( ${nsec}/${dtrs} ))
+
+## spatial dimensions
+#if [[ ${gridtype} == gx37 ]]; then
+#	nx=100
+#	ny=116
+#elif [[ ${gridtype} == gx16* ]]; then
+#	nx=320
+#	ny=384
+#elif [[ ${gridtype} == ww3a ]]; then
+#	nx=90
+#	ny=50
+#else
+#	echo "Grid type ${gridtype} not supported"
+#	exit 1
+#fi
+
+# set path
+path_e="${ww3_dir}/exe"            # path for executables
+path_b="${ww3_dir}/bin"            # path for binaries
+path_a="${ww3_dir}/aux"            # path for aux files and scripts
+path_work="${tmp_dir}/${casename}" # work directory
+path_dat="${toolbox_dir}/data"     # input data directory
+path_out="${path_work}/out"        # output directory
+path_res="${path_work}/restart"    # restart directory
+path_exe="${path_work}/exe"        # directory executables for each case
+path_input="${tmp_dir}/data"       # input data directory for copy
+
+# setup work directory
+mkdir -p ${path_work}
+mkdir -p ${path_exe}
+cd ${path_work}
+
+# setup output directory
+mkdir -p ${path_out}
+
+# setup restart directory
+mkdir -p ${path_res}
+
+# setup compiler and linker script
+cp ${path_b}/comp.${compstr} ${path_b}/comp
+cp ${path_b}/link.${compstr} ${path_b}/link
+
+# clean old files and create new case
+if [[ ${f_new} == yes ]]; then
+	${path_b}/w3_clean all
+	${path_b}/w3_new
+fi
+
+# check error
+check_error "Error in Step 0. Stop..."
+
+## 1. Grid pre-processor ------------------------------------------------------
+if [[ ${f_grid} == yes ]]; then
+	print_title "Grid preprocessor"
+	
+	# compile appropriate code
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_grid
+	cp ${path_e}/ww3_grid ${path_exe}/
+
+	rm -f mod_def.*
+	path_grid="${toolbox_dir}/grids/grid_inp"
+	mkdir -p grid_inp
+	
+	# loop over grids
+	for grd in ${grids}
+	do
+		cp ${path_grid}/${grd}_bottom.inp ./
+		cp ${path_grid}/${grd}_mapsta.inp ./
+		if [[ ${grd} != ww3a* ]]; then
+			cp ${path_grid}/${grd}_[xy].inp ./
+		fi
+		cp ${path_grid}/ww3_grid.inp.${grd} ./ww3_grid.inp
+		echo "  Screen output routed to ${path_out}/ww3_grid_${grd}.out"
+		${path_exe}/ww3_grid > ${path_out}/ww3_grid_${grd}.out
+		mv ${grd}_bottom.inp ${grd}_mapsta.inp ww3_grid.inp ${path_work}/grid_inp
+		if [[ ${grd} != ww3a* ]]; then
+			mv ${grd}_[xy].inp ${path_work}/grid_inp
+		fi
+		mv mod_def.ww3 mod_def.${grd}
+	done
+	# check error
+	check_error "Error in Step 1. Stop..."
+fi
+exit 3
+
+## 2. Initial conditions ------------------------------------------------------
+print_title "Initial conditions"
+
+if [[ ${f_restart} == yes ]]; then
+	file_res="${path_res}/restart_${date_beg}.ww3"
+	if [[ -e ${file_res} ]]; then
+		echo "Restarting run from ${file_res}..."
+		cp ${file_res} ./restart.ww3
+	else
+		echo "Restart file ${file_res} not found. Stop."
+		exit 1
+	fi
+else
+	echo "Starting from initial condition...Preparing..."
+	# compile appropriate code 
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_strt
+	cp ${path_e}/ww3_strt ${path_exe}/
+	path_strt="${toolbox_dir}/data/strt_inp"
+	cp ${path_strt}/ww3_strt.inp ./
+
+	echo "  Screen output routed to ${path_out}/ww3_strt.out"
+	${path_exe}/ww3_strt > ${path_out}/ww3_strt.out
+	mkdir -p strt_inp
+	mv ww3_strt.inp strt_inp/
+fi
+
+# check error
+check_error "Error in Step 2. Stop..."
+
+## 3. Input fields ------------------------------------------------------------
+# update input files
+if [[ ${opt_input} == update ]]; then
+	print_title "Input fields"
+
+	# compile appropriate code 
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_prnc
+	cp ${path_e}/ww3_prnc ${path_exe}
+	path_prnc="${toolbox_dir}/data/prnc_inp"
+
+	# prepare input fields
+	# wind
+	ln -s ${path_dat}/wind.nc ./
+	cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_out}/ww3_prnc_wind.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_wind.out
+	mkdir -p prnc_inp
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
+	rm wind.nc
+	
+	# ice
+	ln -s ${path_dat}/ice.nc ./
+	cp ${path_prnc}/ww3_prnc.inp.ice ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_out}/ww3_prnc_ice.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_ice.out
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
+	rm ice.nc
+	
+	# check error
+	check_error "Error in Step 3. Stop..."
+elif [[ ${opt_input} == copy ]]; then
+	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
+	ln -s ${path_input}/${gridtype}_ice.ww3 ./ice.ww3
+elif [[ ${opt_input} == testIce ]]; then
+	print_title "Input fields"
+
+	# compile appropriate code 
+	echo ${case_switch_ser} > ${path_b}/switch
+	${path_b}/w3_make ww3_prnc
+	cp ${path_e}/ww3_prnc ${path_exe}
+	path_prnc="${toolbox_dir}/data/prnc_inp"
+	
+	# copy wind
+	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
+	
+	# ice fraction
+	ln -s ${path_dat}/b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc ./
+	cp ${path_prnc}/ww3_prnc.inp.cice.ice ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ice.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ice.out
+	mkdir -p prnc_inp
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ice.inp
+	
+	# ice thickness
+	cp ${path_prnc}/ww3_prnc.inp.cice.ic1 ./ww3_prnc.inp
+	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ic1.out"
+	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ic1.out
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ic1.inp
+	rm b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc
+elif [[ ${opt_input} == none ]]; then
+	echo "Do nothing on input file. Please make sure wind.ww3 and ice.ww3 exist."
+else
+	echo "Invalid input option ${opt_input}. Stop."
+	exit 1
+fi
+
+## 4. Main program ------------------------------------------------------------
+print_title "Main program"
+
+# compile appropriate code
+if [[ ${f_mpi} == yes ]]; then
+	echo ${case_switch_mpi} > ${path_b}/switch
+else
+	echo ${case_switch_ser} > ${path_b}/switch
+fi
+${path_b}/w3_make ww3_shel
+cp ${path_e}/ww3_shel ${path_exe}/
+
+# processing input file
+path_shel="${toolbox_dir}/shel_inp"
+cp ${path_shel}/ww3_shel.inp ./ww3_shel.inp.tmp0
+`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_shel.inp.tmp0 > ww3_shel.inp.tmp1`
+`sed "s/LB_ENDING_TIME/${t_end}/g" ww3_shel.inp.tmp1 > ww3_shel.inp.tmp2`
+`sed "s/LB_TIME_INT/${dt}/g" ww3_shel.inp.tmp2 > ww3_shel.inp.tmp3`
+`sed "s/LB_TIME_RES/${dtrs}/g" ww3_shel.inp.tmp3 > ww3_shel.inp`
+rm ww3_shel.inp.tmp?
+mkdir -p shel_inp
+
+# check error
+check_error "Error in Step 4. Stop..."
+
+## 5. Gridded netCDF output post-processor ------------------------------------
+print_title "Gridded netCDF output post-processor"
+
+# compile appropriate code
+echo ${case_switch_ser} > ${path_b}/switch
+${path_b}/w3_make ww3_ounf
+cp ${path_e}/ww3_ounf ${path_exe}/
+
+# processing input file
+path_ounf="${toolbox_dir}/ounf_inp"
+cp ${path_ounf}/ww3_ounf.inp ./ww3_ounf.inp.tmp0
+`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_ounf.inp.tmp0 > ww3_ounf.inp.tmp1`
+`sed "s/LB_TIME_INT/${dt}/g" ww3_ounf.inp.tmp1 > ww3_ounf.inp.tmp2`
+`sed "s/LB_NFILE/${nfile}/g" ww3_ounf.inp.tmp2 > ww3_ounf.inp.tmp3`
+`sed "s/LB_NX/${nx}/g" ww3_ounf.inp.tmp3 > ww3_ounf.inp.tmp4`
+`sed "s/LB_NY/${ny}/g" ww3_ounf.inp.tmp4 > ww3_ounf.inp`
+rm ww3_ounf.inp.tmp?
+mkdir -p ounf_inp
+
+# restart file
+nnn_res=`printf %03d ${nres}`
+sav_res="restart${nnn_res}.ww3"
+rname_res="restart_${date_end}.ww3"
+
+# check error
+check_error "Error in Step 5. Stop..."
+
+## 6. Submitting job ----------------------------------------------------------
+print_title "Submitting job"
+
+echo "  Running WW3 with ${nproc} processors..."
+
+# generate machine-specific submission script
+if [[ ${HOSTNAME} == yslogin* ]]; then
+	exempi="mpirun.lsf"
+# write LSF header for yellowstone
+	cat > submit.sh << EOF
+#!/bin/bash
+#BSUB -n ${nproc}
+#BSUB -q ${queue}
+#BSUB -R "span[ptile=15]"
+#BSUB -N
+#BSUB -W ${walltime}
+#BSUB -x
+#BSUB -J ${casename}
+#BSUB -e ${casename}.err
+#BSUB -o ${casename}.out
+#BSUB -P ${projnum}
+
+module load intel
+module load impi
+
+EOF
+# write postprocessing script for yellowstone
+	cat > postproc.sh << EOF
+#!/bin/bash
+
+EOF
+
+elif [[ ${HOSTNAME} == cheyenne* ]]; then
+	nnode=$(( ${nproc} / 36 + 1 ))
+	if [ ${nnode} -eq 1 ]; then
+		ncpu=${nproc}
+	else
+		ncpu=$(( ${nproc} / ${nnode} ))
+	fi
+	exempi="mpiexec_mpt"
+# write PBS header for cheyenne
+	cat > submit.sh << EOF
+#!/bin/bash
+#PBS -N ${casename}
+#PBS -j oe
+#PBS -q ${queue}
+#PBS -l walltime=${walltime}:00
+#PBS -A ${projnum}
+#PBS -l select=${nnode}:ncpus=${ncpu}:mpiprocs=${ncpu}
+
+module load intel
+module load mpt
+
+export MPI_SHEPHERD=true
+EOF
+# write postprocessing script for cheyenne
+	cat > postproc.sh << EOF
+#!/bin/bash
+#PBS -N pp_${casename}
+#PBS -j oe
+#PBS -q ${queue}
+#PBS -l walltime=00:15:00
+#PBS -A ${projnum}
+#PBS -l select=1:ncpus=1:mpiprocs=1
+
+EOF
+
+fi # check hostname
+
+# write command
+if [[ ${f_mpi} == yes ]]; then
+# mpi run
+	if [[ ${HOSTNAME} == yslogin* ]]; then
+		cat >> submit.sh << EOF
+cd ${path_work}
+${exempi} ${path_exe}/ww3_shel > ${path_out}/ww3_shel.out
+./postproc.sh
+EOF
+	elif [[ ${HOSTNAME} == cheyenne* ]]; then
+		cat >> submit.sh << EOF
+cd ${path_work}
+${exempi} ${path_e}/ww3_shel > ${path_out}/ww3_shel.out
+qsub -W depend=afterok:\$PBS_JOBID ./postproc.sh
+EOF
+	fi
+# single processor run
+else
+	cat >> submit.sh << EOF
+cd ${path_work}
+${path_e}/ww3_shel > ${path_out}/ww3_shel.out
+./postproc.sh
+EOF
+fi
+
+# command for postprocessing script
+cat >> postproc.sh << EOF
+echo "  Log files routed to ${path_out}"
+mv log.* ${path_out}/
+mv ww3_shel.inp shel_inp/
+
+${path_exe}/ww3_ounf > ${path_out}/ww3_ounf.out
+mv ww3_ounf.inp ounf_inp/
+mv ww3.*.nc out/
+mv ${sav_res} restart/${rname_res}
+
+EOF
+
+# check error
+check_error "Error in Step 6. Stop..."
+
+# submitting job
+chmod 755 submit.sh
+chmod 755 postproc.sh
+if [[ ${HOSTNAME} == yslogin* ]]; then
+	bsub < submit.sh
+elif [[ ${HOSTNAME} == cheyenne* ]]; then
+	qsub submit.sh
+fi
