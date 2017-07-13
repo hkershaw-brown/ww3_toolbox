@@ -8,8 +8,9 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
 begin
 
-	diri	= "./grids/"
-	fili	= "gx16b.grids.nc" 
+	diri	= "./"
+	fili	= "gx37.grids.nc"
+	xcrit   = 30
 
 	f	= addfile(diri+fili,"w")
 
@@ -24,11 +25,8 @@ begin
 	mindx 		= min(dxm)
 	print(mindx)
 
-	nlt10 	= sum(where(dxm .lt. 10, 1, 0))
-	print(nlt10)
-	
-	nlt9 	= sum(where(dxm .lt. 9, 1, 0))
-	print(nlt9)
+	nlt 	= sum(where(dxm .lt. xcrit, 1, 0))
+	print(nlt)
 
 	l_plot = 0
 

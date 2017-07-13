@@ -17,7 +17,7 @@ begin
 
 ; define file names
 	gtype   = "gx16b"
-	yyyymm  = "200901"
+	yyyymm  = "200907"
 	casen	= "testIce_"+yyyymm+"_"+gtype
 	datadir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
 	diri	= datadir+casen+"/out/"

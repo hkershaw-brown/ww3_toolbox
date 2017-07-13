@@ -1,28 +1,26 @@
 #!/bin/bash
 #
 # This script sets up and submits job of global WW3 simulation
-# on grid gx37, gx16 or ww3a on Yellowstone.
-# All input files are prepared in directory ${toolbox_dir}. 
-# Run times should be consistent with input fields wind.nc and ice.nc.
+# on grid gx37, gx16(b) or ww3a on Yellowstone.
 #
 # Qing Li, 20170613
 
 ## Run control ----------------------------------------------------------------
 # case name
 gridtype="gx16b"  # grid type: gx16 or gx37 or ww3a
-casename="testIce_200901_${gridtype}"
+casename="testIce_200907_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
-t_beg="20090101 000000"  # first output
-t_end="20090131 000000"  # last output
+t_beg="20090701 000000"  # first output
+t_end="20090731 000000"  # last output
 dt="21600"               # output interval
 dtrs="86400"             # restart interval
 
 # restart run or not
 f_restart="no"
 # clean old exes and build new ones
-f_new="no"
+f_new="yes"
 # update grid
 f_grid="yes"
 # input file options: update, copy, testIce, none
@@ -122,13 +120,13 @@ else
 fi
 
 # set path
-path_e="${ww3_dir}/exe"          # path for executables
-path_b="${ww3_dir}/bin"          # path for binaries
-path_a="${ww3_dir}/aux"          # path for aux files and scripts
-path_work="${tmp_dir}/${casename}"  # work directory
+path_e="${ww3_dir}/exe"            # path for executables
+path_b="${ww3_dir}/bin"            # path for binaries
+path_a="${ww3_dir}/aux"            # path for aux files and scripts
+path_work="${tmp_dir}/${casename}" # work directory
 path_dat="${toolbox_dir}/data"     # input data directory
-path_out="${path_work}/out"           # output directory
-path_res="${path_work}/restart"       # restart directory
+path_out="${path_work}/out"        # output directory
+path_res="${path_work}/restart"    # restart directory
 path_exe="${path_work}/exe"        # directory executables for each case
 path_input="${tmp_dir}/data"       # input data directory for copy
 
@@ -204,7 +202,7 @@ else
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_strt
 	cp ${path_e}/ww3_strt ${path_exe}/
-	path_strt="${toolbox_dir}/strt_inp"
+	path_strt="${toolbox_dir}/data/strt_inp"
 	cp ${path_strt}/ww3_strt.inp ./
 
 	echo "  Screen output routed to ${path_out}/ww3_strt.out"
@@ -225,7 +223,7 @@ if [[ ${opt_input} == update ]]; then
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
 	cp ${path_e}/ww3_prnc ${path_exe}
-	path_prnc="${toolbox_dir}/prnc_inp"
+	path_prnc="${toolbox_dir}/data/prnc_inp"
 
 	# prepare input fields
 	# wind
@@ -257,7 +255,7 @@ elif [[ ${opt_input} == testIce ]]; then
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
 	cp ${path_e}/ww3_prnc ${path_exe}
-	path_prnc="${toolbox_dir}/prnc_inp"
+	path_prnc="${toolbox_dir}/data/prnc_inp"
 	
 	# copy wind
 	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
