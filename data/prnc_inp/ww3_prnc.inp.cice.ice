@@ -48,7 +48,7 @@ $
 $ Define data files -------------------------------------------------- $
 $ The input line identifies the filename using for the forcing field.
 $
-  'b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc'
+  'cice.nc'
 $
 $ -------------------------------------------------------------------- $
 $ End of input file                                                    $

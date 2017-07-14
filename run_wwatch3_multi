@@ -44,7 +44,6 @@ queue="regular"
 # set switch
 case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
 "NL1 TR0 BS0 IC2 IS2 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
-case_switch_ser="${case_switch_base} SHRD"
 case_switch_mpi="${case_switch_base} MPI DIST"
 
 # specify compiler string (as per in ww3_dir/bin options) here:
@@ -94,13 +93,6 @@ print_title () {
 
 ## 0. Preprocessing -----------------------------------------------------------
 print_title "Preprocessing"
-
-if [[ ${nproc} -gt 1 ]]; then
-	# run ww3 in MPI mode
-	f_mpi="yes"
-else
-	f_mpi="no"
-fi
 
 # calculate the output file number
 date_beg=${t_beg:0:8}
@@ -296,23 +288,19 @@ fi
 print_title "Main program"
 
 # compile appropriate code
-if [[ ${f_mpi} == yes ]]; then
-	echo ${case_switch_mpi} > ${path_b}/switch
-else
-	echo ${case_switch_ser} > ${path_b}/switch
-fi
-${path_b}/w3_make ww3_shel
-cp ${path_e}/ww3_shel ${path_exe}/
+echo ${case_switch_mpi} > ${path_b}/switch
+${path_b}/w3_make ww3_multi
+cp ${path_e}/ww3_multi ${path_exe}/
 
 # processing input file
-path_shel="${toolbox_dir}/shel_inp"
-cp ${path_shel}/ww3_shel.inp ./ww3_shel.inp.tmp0
-`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_shel.inp.tmp0 > ww3_shel.inp.tmp1`
-`sed "s/LB_ENDING_TIME/${t_end}/g" ww3_shel.inp.tmp1 > ww3_shel.inp.tmp2`
-`sed "s/LB_TIME_INT/${dt}/g" ww3_shel.inp.tmp2 > ww3_shel.inp.tmp3`
-`sed "s/LB_TIME_RES/${dtrs}/g" ww3_shel.inp.tmp3 > ww3_shel.inp`
-rm ww3_shel.inp.tmp?
-mkdir -p shel_inp
+path_multi="${toolbox_dir}/run/multi_inp"
+cp ${path_multi}/ww3_multi.inp ./ww3_multi.inp.tmp0
+`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_multi.inp.tmp0 > ww3_multi.inp.tmp1`
+`sed "s/LB_ENDING_TIME/${t_end}/g" ww3_multi.inp.tmp1 > ww3_multi.inp.tmp2`
+`sed "s/LB_TIME_INT/${dt}/g" ww3_multi.inp.tmp2 > ww3_multi.inp.tmp3`
+`sed "s/LB_TIME_RES/${dtrs}/g" ww3_multi.inp.tmp3 > ww3_multi.inp`
+rm ww3_multi.inp.tmp?
+mkdir -p multi_inp
 
 # check error
 check_error "Error in Step 4. Stop..."
@@ -410,31 +398,21 @@ EOF
 #PBS -l select=1:ncpus=1:mpiprocs=1
 
 EOF
-
 fi # check hostname
 
 # write command
-if [[ ${f_mpi} == yes ]]; then
 # mpi run
-	if [[ ${HOSTNAME} == yslogin* ]]; then
-		cat >> submit.sh << EOF
-cd ${path_work}
-${exempi} ${path_exe}/ww3_shel > ${path_out}/ww3_shel.out
-./postproc.sh
-EOF
-	elif [[ ${HOSTNAME} == cheyenne* ]]; then
-		cat >> submit.sh << EOF
-cd ${path_work}
-${exempi} ${path_e}/ww3_shel > ${path_out}/ww3_shel.out
-qsub -W depend=afterok:\$PBS_JOBID ./postproc.sh
-EOF
-	fi
-# single processor run
-else
+if [[ ${HOSTNAME} == yslogin* ]]; then
 	cat >> submit.sh << EOF
 cd ${path_work}
-${path_e}/ww3_shel > ${path_out}/ww3_shel.out
+${exempi} ${path_exe}/ww3_multi > ${path_out}/ww3_multi.out
 ./postproc.sh
+EOF
+elif [[ ${HOSTNAME} == cheyenne* ]]; then
+	cat >> submit.sh << EOF
+cd ${path_work}
+${exempi} ${path_e}/ww3_multi > ${path_out}/ww3_multi.out
+qsub -W depend=afterok:\$PBS_JOBID ./postproc.sh
 EOF
 fi
 
@@ -442,7 +420,7 @@ fi
 cat >> postproc.sh << EOF
 echo "  Log files routed to ${path_out}"
 mv log.* ${path_out}/
-mv ww3_shel.inp shel_inp/
+mv ww3_multi.inp multi_inp/
 
 ${path_exe}/ww3_ounf > ${path_out}/ww3_ounf.out
 mv ww3_ounf.inp ounf_inp/

@@ -29,5 +29,8 @@ ncrcat -O -h tmp.??.nc ${outdir}/${outdata}
 ncatted -O -a units,time,o,c,"days since 1910-12-24 00:00:00" ${outdir}/${outdata}
 ncatted -O -a calendar,time,o,c,"gregorian" ${outdir}/${outdata}
 
+# create soft link
+ln -s ${outdir}/${outdata} ${outdir}/cice.nc
+
 # clean up
 rm tmp.??.nc

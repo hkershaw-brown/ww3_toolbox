@@ -261,7 +261,7 @@ elif [[ ${opt_input} == testIce ]]; then
 	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
 	
 	# ice fraction
-	ln -s ${path_dat}/b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc ./
+	ln -s ${path_dat}/cice.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.cice.ice ./ww3_prnc.inp
 	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ice.out"
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ice.out
@@ -273,7 +273,7 @@ elif [[ ${opt_input} == testIce ]]; then
 	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ic1.out"
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ic1.out
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ic1.inp
-	rm b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc
+	rm cice.nc
 elif [[ ${opt_input} == none ]]; then
 	echo "Do nothing on input file. Please make sure wind.ww3 and ice.ww3 exist."
 else
@@ -294,7 +294,7 @@ ${path_b}/w3_make ww3_shel
 cp ${path_e}/ww3_shel ${path_exe}/
 
 # processing input file
-path_shel="${toolbox_dir}/shel_inp"
+path_shel="${toolbox_dir}/run/shel_inp"
 cp ${path_shel}/ww3_shel.inp ./ww3_shel.inp.tmp0
 `sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_shel.inp.tmp0 > ww3_shel.inp.tmp1`
 `sed "s/LB_ENDING_TIME/${t_end}/g" ww3_shel.inp.tmp1 > ww3_shel.inp.tmp2`
