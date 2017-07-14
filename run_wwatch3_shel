@@ -5,6 +5,9 @@
 #
 # Qing Li, 20170613
 
+## load shared functions ------------------------------------------------------
+source ./share/bash_functions.sh
+
 ## Run control ----------------------------------------------------------------
 # case name
 gridtype="gx16b"  # grid type: gx16 or gx37 or ww3a
@@ -23,8 +26,8 @@ f_restart="no"
 f_new="yes"
 # update grid
 f_grid="yes"
-# input file options: update, copy, testIce, none
-opt_input="testIce"
+# input file options: core2update, core2copy, cice, none
+opt_input="cice"
 
 # number of processors
 nproc=64
@@ -63,28 +66,6 @@ else
 	exit 1
 fi
 export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
-
-## functions ------------------------------------------------------------------
-check_error () {
-# stop if any error occurs
-	if [ $? -ne 0 ]; then
-		echo $1
-		exit 1
-	fi
-}
-
-print_title () {
-# print section title
-	nl=${#1}
-	str=`printf  '%.0s-' $(seq 1 $(( ${nl}+2 )))`
-	echo " "
-	echo " "
-	echo "  +${str}+"
-	echo "  | $1 |"
-	echo "  +${str}+"
-	echo " "
-	echo " "
-}
 
 ## 0. Preprocessing -----------------------------------------------------------
 print_title "Preprocessing"
@@ -216,7 +197,7 @@ check_error "Error in Step 2. Stop..."
 
 ## 3. Input fields ------------------------------------------------------------
 # update input files
-if [[ ${opt_input} == update ]]; then
+if [[ ${opt_input} == core2update ]]; then
 	print_title "Input fields"
 
 	# compile appropriate code 
@@ -245,10 +226,10 @@ if [[ ${opt_input} == update ]]; then
 	
 	# check error
 	check_error "Error in Step 3. Stop..."
-elif [[ ${opt_input} == copy ]]; then
+elif [[ ${opt_input} == core2copy ]]; then
 	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
 	ln -s ${path_input}/${gridtype}_ice.ww3 ./ice.ww3
-elif [[ ${opt_input} == testIce ]]; then
+elif [[ ${opt_input} == cice ]]; then
 	print_title "Input fields"
 
 	# compile appropriate code 
@@ -295,12 +276,11 @@ cp ${path_e}/ww3_shel ${path_exe}/
 
 # processing input file
 path_shel="${toolbox_dir}/run/shel_inp"
-cp ${path_shel}/ww3_shel.inp ./ww3_shel.inp.tmp0
-`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_shel.inp.tmp0 > ww3_shel.inp.tmp1`
-`sed "s/LB_ENDING_TIME/${t_end}/g" ww3_shel.inp.tmp1 > ww3_shel.inp.tmp2`
-`sed "s/LB_TIME_INT/${dt}/g" ww3_shel.inp.tmp2 > ww3_shel.inp.tmp3`
-`sed "s/LB_TIME_RES/${dtrs}/g" ww3_shel.inp.tmp3 > ww3_shel.inp`
-rm ww3_shel.inp.tmp?
+cp ${path_shel}/ww3_shel.inp ./
+find_replace LB_STARTING_TIME ${t_beg} ww3_shel.inp
+find_replace LB_ENDING_TIME ${t_end} ww3_shel.inp
+find_replace LB_TIME_INT ${dt} ww3_shel.inp
+find_replace LB_TIME_RES ${dtrs} ww3_shel.inp
 mkdir -p shel_inp
 
 # check error
@@ -315,14 +295,13 @@ ${path_b}/w3_make ww3_ounf
 cp ${path_e}/ww3_ounf ${path_exe}/
 
 # processing input file
-path_ounf="${toolbox_dir}/ounf_inp"
-cp ${path_ounf}/ww3_ounf.inp ./ww3_ounf.inp.tmp0
-`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_ounf.inp.tmp0 > ww3_ounf.inp.tmp1`
-`sed "s/LB_TIME_INT/${dt}/g" ww3_ounf.inp.tmp1 > ww3_ounf.inp.tmp2`
-`sed "s/LB_NFILE/${nfile}/g" ww3_ounf.inp.tmp2 > ww3_ounf.inp.tmp3`
-`sed "s/LB_NX/${nx}/g" ww3_ounf.inp.tmp3 > ww3_ounf.inp.tmp4`
-`sed "s/LB_NY/${ny}/g" ww3_ounf.inp.tmp4 > ww3_ounf.inp`
-rm ww3_ounf.inp.tmp?
+path_ounf="${toolbox_dir}/postprocess/ounf_inp"
+cp ${path_ounf}/ww3_ounf.inp ./
+find_replace LB_STARTING_TIME ${t_beg} ww3_ounf.inp
+find_replace LB_TIME_INT ${dt} ww3_ounf.inp
+find_replace LB_NFILE ${nfile} ww3_ounf.inp
+find_replace LB_NX ${nx} ww3_ounf.inp
+find_replace LB_NY ${ny} ww3_ounf.inp
 mkdir -p ounf_inp
 
 # restart file

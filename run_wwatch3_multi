@@ -5,11 +5,18 @@
 #
 # Qing Li, 20170713
 
+## load shared functions ------------------------------------------------------
+source ./share/bash_functions.sh
+
 ## Run control ----------------------------------------------------------------
 # case name
 gridtype="mww3a"  # grid type: mww3a
 if [[ ${gridtype} == mww3a ]]; then
-	grids="gx16b_sp gx37b_eq gx16b_np"  # combination of gx16b_sp, gx37b_eq and gx16b_np
+	grid1="gx16b_sp"
+	grid2="gx37b_eq"
+	grid3="gx16b_np"
+	grids="${grid1} ${grid2} ${grid3}"  # combination of gx16b_sp, gx37b_eq and gx16b_np
+	inputgrid="gx16b"
 else
 	echo "Grid type ${gridtype} not supported. Stop."
 	exit 1
@@ -29,8 +36,8 @@ f_restart="no"
 f_new="yes"
 # update grid
 f_grid="yes"
-# input file options: update, copy, testIce, none
-opt_input="testIce"
+# input file options: core2update, core2copy, cice, none
+opt_input="cice"
 
 # number of processors
 nproc=64
@@ -68,28 +75,6 @@ else
 	exit 1
 fi
 export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
-
-## functions ------------------------------------------------------------------
-check_error () {
-# stop if any error occurs
-	if [ $? -ne 0 ]; then
-		echo $1
-		exit 1
-	fi
-}
-
-print_title () {
-# print section title
-	nl=${#1}
-	str=`printf  '%.0s-' $(seq 1 $(( ${nl}+2 )))`
-	echo " "
-	echo " "
-	echo "  +${str}+"
-	echo "  | $1 |"
-	echo "  +${str}+"
-	echo " "
-	echo " "
-}
 
 ## 0. Preprocessing -----------------------------------------------------------
 print_title "Preprocessing"
@@ -166,7 +151,7 @@ if [[ ${f_grid} == yes ]]; then
 	mkdir -p grid_inp
 	
 	# loop over grids
-	for grd in ${grids}
+	for grd in ${grids} ${inputgrid}
 	do
 		cp ${path_grid}/${grd}_bottom.inp ./
 		cp ${path_grid}/${grd}_mapsta.inp ./
@@ -185,7 +170,6 @@ if [[ ${f_grid} == yes ]]; then
 	# check error
 	check_error "Error in Step 1. Stop..."
 fi
-exit 3
 
 ## 2. Initial conditions ------------------------------------------------------
 print_title "Initial conditions"
@@ -219,7 +203,7 @@ check_error "Error in Step 2. Stop..."
 
 ## 3. Input fields ------------------------------------------------------------
 # update input files
-if [[ ${opt_input} == update ]]; then
+if [[ ${opt_input} == core2update ]]; then
 	print_title "Input fields"
 
 	# compile appropriate code 
@@ -229,6 +213,7 @@ if [[ ${opt_input} == update ]]; then
 	path_prnc="${toolbox_dir}/data/prnc_inp"
 
 	# prepare input fields
+	cp ww3_grid.${inputgrid} ww3_grid.ww3
 	# wind
 	ln -s ${path_dat}/wind.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
@@ -245,13 +230,14 @@ if [[ ${opt_input} == update ]]; then
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_ice.out
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
 	rm ice.nc
-	
+	rm ww3_grid.ww3
+
 	# check error
 	check_error "Error in Step 3. Stop..."
-elif [[ ${opt_input} == copy ]]; then
-	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
-	ln -s ${path_input}/${gridtype}_ice.ww3 ./ice.ww3
-elif [[ ${opt_input} == testIce ]]; then
+elif [[ ${opt_input} == core2copy ]]; then
+	ln -s ${path_input}/${inputgrid}_wind.ww3 ./wind.ww3
+	ln -s ${path_input}/${inputgrid}_ice.ww3 ./ice.ww3
+elif [[ ${opt_input} == cice ]]; then
 	print_title "Input fields"
 
 	# compile appropriate code 
@@ -261,10 +247,11 @@ elif [[ ${opt_input} == testIce ]]; then
 	path_prnc="${toolbox_dir}/data/prnc_inp"
 	
 	# copy wind
-	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
+	ln -s ${path_input}/${inputgrid}_wind.ww3 ./wind.ww3
 	
 	# ice fraction
-	ln -s ${path_dat}/b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc ./
+	cp ww3_grid.${inputgrid} ww3_grid.ww3
+	ln -s ${path_dat}/cice.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.cice.ice ./ww3_prnc.inp
 	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ice.out"
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ice.out
@@ -276,7 +263,8 @@ elif [[ ${opt_input} == testIce ]]; then
 	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ic1.out"
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ic1.out
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ic1.inp
-	rm b1850_f19_gx1_ctrl_cice_0099_0.5x0.5.nc
+	rm cice.nc
+	rm ww3_grid.ww3
 elif [[ ${opt_input} == none ]]; then
 	echo "Do nothing on input file. Please make sure wind.ww3 and ice.ww3 exist."
 else
@@ -294,12 +282,15 @@ cp ${path_e}/ww3_multi ${path_exe}/
 
 # processing input file
 path_multi="${toolbox_dir}/run/multi_inp"
-cp ${path_multi}/ww3_multi.inp ./ww3_multi.inp.tmp0
-`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_multi.inp.tmp0 > ww3_multi.inp.tmp1`
-`sed "s/LB_ENDING_TIME/${t_end}/g" ww3_multi.inp.tmp1 > ww3_multi.inp.tmp2`
-`sed "s/LB_TIME_INT/${dt}/g" ww3_multi.inp.tmp2 > ww3_multi.inp.tmp3`
-`sed "s/LB_TIME_RES/${dtrs}/g" ww3_multi.inp.tmp3 > ww3_multi.inp`
-rm ww3_multi.inp.tmp?
+cp ${path_multi}/ww3_multi.inp ./
+find_replace LB_STARTING_TIME ${t_beg} ww3_multi.inp
+find_replace LB_ENDING_TIME ${t_end} ww3_multi.inp
+find_replace LB_TIME_INT ${dt} ww3_multi.inp
+find_replace LB_TIME_RES ${dtrs} ww3_multi.inp
+find_replace LB_INPUT_GRID ${inputgrid} ww3_multi.inp
+find_replace LB_GRID1 ${grid1} ww3_multi.inp
+find_replace LB_GRID2 ${grid2} ww3_multi.inp
+find_replace LB_GRID3 ${grid3} ww3_multi.inp
 mkdir -p multi_inp
 
 # check error
@@ -314,14 +305,13 @@ ${path_b}/w3_make ww3_ounf
 cp ${path_e}/ww3_ounf ${path_exe}/
 
 # processing input file
-path_ounf="${toolbox_dir}/ounf_inp"
-cp ${path_ounf}/ww3_ounf.inp ./ww3_ounf.inp.tmp0
-`sed "s/LB_STARTING_TIME/${t_beg}/g" ww3_ounf.inp.tmp0 > ww3_ounf.inp.tmp1`
-`sed "s/LB_TIME_INT/${dt}/g" ww3_ounf.inp.tmp1 > ww3_ounf.inp.tmp2`
-`sed "s/LB_NFILE/${nfile}/g" ww3_ounf.inp.tmp2 > ww3_ounf.inp.tmp3`
-`sed "s/LB_NX/${nx}/g" ww3_ounf.inp.tmp3 > ww3_ounf.inp.tmp4`
-`sed "s/LB_NY/${ny}/g" ww3_ounf.inp.tmp4 > ww3_ounf.inp`
-rm ww3_ounf.inp.tmp?
+path_ounf="${toolbox_dir}/postprocess/ounf_inp"
+cp ${path_ounf}/ww3_ounf.inp ./
+find_replace LB_STARTING_TIME ${t_beg} ww3_ounf.inp
+find_replace LB_TIME_INT ${dt} ww3_ounf.inp
+find_replace LB_NFILE ${nfile} ww3_ounf.inp
+find_replace LB_NX ${nx} ww3_ounf.inp
+find_replace LB_NY ${ny} ww3_ounf.inp
 mkdir -p ounf_inp
 
 # restart file
