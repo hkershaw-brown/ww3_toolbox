@@ -8,7 +8,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 
-undef(get_gird_type)
+undef("get_gird_type")
 function get_grid_type(gName:string)
 ; Return grid type:
 ; 	0: Grid not supported
@@ -49,16 +49,16 @@ begin
 	; check grid names
 	gridS = get_grid_type(gTypeIn)
 	gridD = get_grid_type(gTypeOut)
-	if (gridS == 0 .or. gridD == 0) then
+	if (gridS .eq. 0 .or. gridD .eq. 0) then
 		print("Grid type not supported.")
 		exit()
 	end if
-	if (gridS == 2) then
+	if (gridS .eq. 2) then
 		vLatS = "TLAT"
 		vLonS = "TLONG"
 		vMaskS = "REGION_MASK"
 	end if
-	if (gridD == 2) then
+	if (gridD .eq. 2) then
 		vLatD = "TLAT"
 		vLonD = "TLONG"
 		vMaskD = "REGION_MASK"
@@ -82,14 +82,14 @@ begin
 			opt@Title          = gTypeIn
 			opt@ForceOverwrite = True
 			opt@PrintTimings   = True
-			if (gridS == 2) then
+			if (gridS .eq. 2) then
 				fgs = addfile(srcGridIn,"r")
 				lat2dS = fgs->$vLatS$
 				lon2dS = fgs->$vLonS$    
 				rmaskS = fgs->$vMaskS$
 				opt@GridMask       = where(rmaskS .ne. 0, 1, 0)
 				curvilinear_to_SCRIP(srcGridName, lat2dS, lon2dS, opt)
-			else if (gridS == 1) then
+			else if (gridS .eq. 1) then
 				latlon_to_SCRIP(dstGridName, gTypeIn, opt)
 			end if
 			end if
@@ -104,14 +104,14 @@ begin
 			opt@Title          = gTypeOut
 			opt@ForceOverwrite = True
 			opt@PrintTimings   = True
-			if (gridD == 2) then
+			if (gridD .eq. 2) then
 				fgd = addfile(dstGridIn,"r")
 				lat2dD = fgd->$vLatD$
 				lon2dD = fgd->$vLonD$    
 				rmaskD = fgd->$vMaskD$
 				opt@GridMask       = where(rmaskD .ne. 0, 1, 0)
 				curvilinear_to_SCRIP(dstGridName, lat2dD, lon2dD, opt)
-			else if (gridD == 1) then
+			else if (gridD .eq. 1) then
 				latlon_to_SCRIP(dstGridName, gTypeOut, opt)
 			end if
 			end if
