@@ -27,58 +27,50 @@ intMethod = "bilinear"
 ; output files
 outFile = str_sub_str(inFile, ".nc", "_"+gTypeOut+".nc")
 dirGrid = "../grids"
-srcGridIn = dirGrid+"/"+gTypeIn+".grids.nc"
-srcGridName = dirGrid+"/"+gTypeIn+"_SCRIP.nc"
-dstGridName = dirGrid+"/"+gTypeOut+"_SCRIP.nc"
 wgtFileName = dirGrid+"/"+gTypeIn+"_to_"+gTypeOut+"_"+intMethod+".nc"
-
-if (.not. fileexists(srcGridName)) then
-;----------------------------------------------------------------------
-; convert original source curvilinear grid to a SCRIP convention file.
-;----------------------------------------------------------------------
-	fg = addfile(srcGridIn,"r")
-	lat2d = fg->$vlat$
-	lon2d = fg->$vlon$    
-	rmask = fg->$vmask$
-	
-	opt                = True
-	opt@GridMask       = where(rmask .ne. 0, 1, 0)
-	opt@ForceOverwrite = True
-	opt@PrintTimings   = True
-	opt@Title          = gTypeIn
-	
-	curvilinear_to_SCRIP(srcGridName, lat2d, lon2d, opt)
-	
-	; clean up
-	delete(opt)
-end if
-
-if (.not. fileexists(dstGridName)) then
-;----------------------------------------------------------------------
-; convert destination lat-lon grid to a SCRIP convention file.
-;----------------------------------------------------------------------
-	opt                = True
-	opt@ForceOverwrite = True
-	opt@PrintTimings   = True
-	opt@Title          = gTypeOut
-	
-	latlon_to_SCRIP(dstGridName, gTypeOut, opt)
-	
-	; clean up
-	delete(opt)
-end if
 
 if (.not. fileexists(wgtFileName)) then
 ;----------------------------------------------------------------------
 ; generate the weights
 ;----------------------------------------------------------------------
+	srcGridIn = dirGrid+"/"+gTypeIn+".grids.nc"
+	srcGridName = dirGrid+"/"+gTypeIn+"_SCRIP.nc"
+	dstGridName = dirGrid+"/"+gTypeOut+"_SCRIP.nc"
+	if (.not. fileexists(srcGridName)) then
+	;----------------------------------------------------------------------
+	; convert original source curvilinear grid to a SCRIP convention file.
+	;----------------------------------------------------------------------
+		fg = addfile(srcGridIn,"r")
+		lat2d = fg->$vlat$
+		lon2d = fg->$vlon$    
+		rmask = fg->$vmask$
+		opt                = True
+		opt@GridMask       = where(rmask .ne. 0, 1, 0)
+		opt@ForceOverwrite = True
+		opt@PrintTimings   = True
+		opt@Title          = gTypeIn
+		curvilinear_to_SCRIP(srcGridName, lat2d, lon2d, opt)
+		; clean up
+		delete(opt)
+	end if
+	if (.not. fileexists(dstGridName)) then
+	;----------------------------------------------------------------------
+	; convert destination lat-lon grid to a SCRIP convention file.
+	;----------------------------------------------------------------------
+		opt                = True
+		opt@ForceOverwrite = True
+		opt@PrintTimings   = True
+		opt@Title          = gTypeOut
+		latlon_to_SCRIP(dstGridName, gTypeOut, opt)
+		; clean up
+		delete(opt)
+	end if
 	opt                      = True
 	opt@InterpMethod         = intMethod     ; default
 	opt@ForceOverwrite       = True
 	opt@PrintTimings         = True
-	
 	ESMF_regrid_gen_weights(srcGridName, dstGridName, wgtFileName, opt)
-	
+	; clean up	
 	delete(opt)
 end if
 
