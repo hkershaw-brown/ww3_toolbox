@@ -128,3 +128,51 @@ begin
 	end if
 end ; procedure
 
+
+procedure test_plot_map(type, figOut, dat, res)
+; This procedure set up a quick map figure with some default settings 
+
+local res, dat, type, wks, plot, opts, figOut
+begin
+	if (res) then
+		opts = res
+	else
+		opts = True
+	end if
+	; open workstation
+	wks		= gsn_open_wks(type, figOut) 
+	gsn_define_colormap(wks, "MPL_rainbow")
+	opts@gsnDraw			= False
+	opts@gsnFrame			= False
+	opts@gsnAddCyclic		= True
+	opts@gsnMaximize		= True
+	opts@gsnPaperMargin		= 0.2
+	opts@gsnPaperOrientation	= "portrait" 
+	opts@gsnSpreadColors		= True
+	opts@vpWidthF			= 0.6
+	opts@vpHeightF			= 0.4
+	opts@mpCenterLonF		= 200
+	opts@mpShapeMode		= "FreeAspect"
+	opts@cnLinesOn			= False
+	opts@cnInfoLabelOn		= False
+	opts@cnLineLabelsOn		= False
+	opts@cnFillOn			= True
+	opts@cnFillMode			= "CellFill"
+	opts@lbLabelBarOn		= True
+        opts@lbOrientation		= "vertical"
+        opts@lbLeftMarginF		= 0.0
+        opts@lbLabelAutoStride		= True
+	if (.not. isatt(opts, "gsnLeftString")) then
+		opts@gsnLeftString		= " "
+	end if
+	if (.not. isatt(opts, "gsnRightString")) then
+		opts@gsnRightString		= dat@units
+	end if
+	if (.not. isatt(opts, "cnLevelSelectionMode")) then
+		opts@cnLevelSelectionMode	= "AutomaticLevels"
+	end if
+	; plot
+	plot = gsn_csm_contour_map(wks, dat, opts)
+	draw(plot)
+	frame(wks)
+end ; procedure

@@ -36,22 +36,33 @@ opt@PrintTimings   = True
 
 ; open file
 f1 = addfile(inFile1, "r")
+lat1 = f1->latitude
+lon1 = f1->longitude
 f2 = addfile(inFile2, "r")
+lat2 = f1->latitude
+lon2 = f1->longitude
 
 ; loop over variables
 nVar = dimsizes(vars)
 do i=0,nVar-1
 	var = vars(i)
 	dat1 = f1->$var$
+	dat1@lat2d = lat1
+	dat1@lon2d = lon1
 	dat2 = f2->$var$
+	dat2@lat2d = lat2
+	dat2@lon2d = lon2
 	dat1Regrid = ESMF_regrid_with_weights(dat1, wgtFileName, opt)
 	printVarSummary(dat1Regrid)
 	printMinMax(dat1, 1)
 	printMinMax(dat1Regrid, 1)
 	printVarSummary(dat2)
 	printMinMax(dat2, 1)
-	datDiff = dat2
+	datDiff = dat1Regrid
 	datDiff = (/dat1Regrid-dat2/)
+	minMeanDiff = dim_min_n(datDiff, (/1, 2/))
+	maxMeanDiff = dim_max_n(datDiff, (/1, 2/))
+	print(maxMeanDiff)
 	printMinMax(datDiff, 1)
 	; calculate the root mean square difference
 	rmsd = wgt_arearmse(dat1Regrid, dat2, 1.0, 1.0, 0)
@@ -67,55 +78,18 @@ end do
 
 ; Check the differences
 l_plot = True
-nt = 119
 if (l_plot) then
 ; plot a snapshot
 	type    = "ps"  ; plot type                                                                             
 	type@wkPaperWidthF  = 6
 	type@wkPaperHeightF = 4.5
-;	type    = "x11"
-
+	type    = "x11"
 	filo = "diff"
-; open workstation
-	wks		= gsn_open_wks(type, filo) 
-	gsn_define_colormap(wks, "WhBlGrYeRe") ;BlGrYeOrReVi200")
 
-	res					= True
-	res@gsnDraw				= False
-	res@gsnFrame				= False
-	res@gsnAddCyclic			= True
-	res@gsnLeftString			= "Difference"
-	res@gsnRightString			= dat2@units
-	res@gsnMaximize				= True
-	res@gsnPaperOrientation			= "portrait" 
-	res@gsnPaperMargin			= 0.2
-; change the size of the image box
-	res@vpWidthF      = 0.6
-	res@vpHeightF     = 0.4
-; map
-	res@mpCenterLonF			= 200
-	res@mpShapeMode				= "FreeAspect"
-
-; line labels
-	res@cnLinesOn				= False
-	res@cnInfoLabelOn			= False
-	res@cnLineLabelsOn			= False
-	res@trYReverse				= True			; reverse the Y-axis
-
-	res@cnFillOn				= True
-	res@gsnSpreadColors			= True
-	res@cnLevelSelectionMode                = "AutomaticLevels"
-	;res@cnMinLevelValF                      = 0
-	;res@cnMaxLevelValF                      = 120
-	;res@cnLevelSpacingF                     = 10
-	res@lbLabelBarOn 	      		= True
-        res@lbOrientation                       = "vertical"    ; vertical label bar
-        res@lbLeftMarginF                       = 0.0
-        res@lbLabelAutoStride                   = True
-
-; plot
-	plot = gsn_csm_contour_map(wks, datDiff(nt,:,:), res)
-	draw(plot)
-	frame(wks)
+	res = True
+	res@gsnLeftString	= filo
+	nt = 119
+	test_plot_map(type, filo, dat1(nt,:,:), res)
 end if
+
 end 
