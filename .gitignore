@@ -1,6 +1,7 @@
 *.nc
 *.gif
 *.ps
+*.eps
 *.swp
 *.log
 *.Log

@@ -10,7 +10,8 @@ begin
 pData = "/Users/qingli/data_local/WW3"
 cName = "testIce"
 yyyymm = "200901"
-vars = (/"hs", "t02", "fp"/)
+vars = (/"hs", "t02", "fp", "ust", "uss", "tus"/)
+isVector = (/False, False, False, True, True, True/)
 grid1 = "gx37"
 grid2 = "gx16b"
 ; input data
@@ -19,7 +20,7 @@ inFile2 = pData+"/"+cName+"/"+grid2+"/ww3_"+yyyymm+".nc"
 ; output data
 outFile = cName+"_gridErr_"+grid1+"_"+grid2+"_"+yyyymm+".out"
 ; if plot snapshot
-l_plot = False
+l_plot = True
 
 ; grid path
 dirGrid = "../grids"
@@ -52,25 +53,43 @@ nt = dimsizes(time)
 ; averaging window
 inds = nt/2
 inde = nt-1
-
+; radians to degree
+r2d = 45.0/atan(1.0)
 ; write header
-if (.not. isfile(outFile)) then
-	write_table(outFile, "w", \
+write_table(outFile, "w", \
 	[/"VAR", "Mean ("+grid1+")", "Mean ("+grid2+")", "Mean Diff.", "RMSD", "RMS", "RMSD/RMS"/],\
-	 "%15s %15s %15s %15s %12s %12s %12s")
-end if
+	 "%18s %15s %15s %15s %12s %12s %12s")
 
 ; loop over variables
 nVar = dimsizes(vars)
 do i=0,nVar-1
 	var = vars(i)
-	dat1 = f1->$var$
-	dat1@lat2d = lat1
-	dat1@lon2d = lon1
-	dat2 = f2->$var$
-	dat2@lat2d = lat2
-	dat2@lon2d = lon2
-	dat1Regrid = ESMF_regrid_with_weights(dat1, wgtFileName, opt)
+	if (isVector(i)) then
+		; vector field
+		varX = "u"+vars(i)
+		varY = "v"+vars(i)
+		dat1X = f1->$varX$
+		dat1Y = f1->$varY$
+		dat1 = sqrt(dat1X^2+dat1Y^2)
+		dir1 = atan2(dat1Y, dat1X) * r2d
+		dat1@units = dat1X@units
+		dat2X = f2->$varX$
+		dat2Y = f2->$varY$
+		dat2 = sqrt(dat2X^2+dat2Y^2)
+		dir2 = atan2(dat2Y, dat2X) * r2d
+		dat2@units = dat2X@units
+		dat1Regrid = ESMF_regrid_with_weights(dat1, wgtFileName, opt)
+		dir1Regrid = ESMF_regrid_with_weights(dir1, wgtFileName, opt)
+	else
+		;scalar fidld
+		dat1 = f1->$var$
+		dat1@lat2d = lat1
+		dat1@lon2d = lon1
+		dat2 = f2->$var$
+		dat2@lat2d = lat2
+		dat2@lon2d = lon2
+		dat1Regrid = ESMF_regrid_with_weights(dat1, wgtFileName, opt)
+	end if
 	;; check regridding
 	;printVarSummary(dat1Regrid)
 	;printMinMax(dat1, 1)
@@ -80,7 +99,7 @@ do i=0,nVar-1
 	;; check difference
 	datDiff = dat1Regrid
 	datDiff = (/dat1Regrid-dat2/)
-	printMinMax(datDiff, 1)
+	;printMinMax(datDiff, 1)
 	; calculate the root mean square difference
 	rmsd = wgt_arearmse(dat1Regrid, dat2, 1.0, 1.0, 0)
 	;print(rmsd)
@@ -103,22 +122,45 @@ do i=0,nVar-1
 	;print(meanDiff)
 	write_table(outFile, "a", \
 		[/var+" ("+dat1@units+")", dat1Mean, dat2Mean, meanDiff, rmsd_tavg, rms_tavg, nrmsd_tavg/], \
-		 "%15s %15.2f %15.2f %15.2f %12.2f %12.2f %12.2f")
+		 "%18s %15.2f %15.2f %15.2f %12.2f %12.2f %12.2f")
+	;; for direction
+	;if (isVector(i)) then
+	;	; calculate the root mean square difference
+	;	rmsd = wgt_arearmse(dir1Regrid, dir2, 1.0, 1.0, 0)
+	;	rmsd_tavg = avg(rmsd(inds:inde))
+	;	; calculate the root mean square value on grid2
+	;	rms  = wgt_arearmse(zeros, dir2, 1.0, 1.0, 0)
+	;	rms_tavg = avg(rms(inds:inde))	
+	;	nrmsd_tavg = rmsd_tavg/rms_tavg
+	;	; calculate the mean and difference
+	;	dat1Mean = avg(dir1(inds:inde,:,:))	
+	;	dat2Mean = avg(dir2(inds:inde,:,:))
+	;	meanDiff = dat1Mean-dat2Mean
+	;	write_table(outFile, "a", \
+	;		[/var+" dir. (deg.)", dat1Mean, dat2Mean, meanDiff, rmsd_tavg, rms_tavg, nrmsd_tavg/], \
+	;	 	"%18s %15.2f %15.2f %15.2f %12.2f %12.2f %12.2f")
+	;	datDiff = dir1Regrid
+	;	datDiff = (/dir1Regrid-dir2/)
+	;end if
+
+	; Check the differences
+	if (l_plot) then
+	; plot a snapshot
+		type    = "ps"  ; plot type
+		type@wkPaperWidthF  = 6
+		type@wkPaperHeightF = 4.5
+		;type    = "x11"
+		figOut = cName+"_"+var+"_diff_"+yyyymm
+		figOut2 = cName+"_"+var+"_"+grid2+"_"+yyyymm
+	
+		res = True
+		res@gsnLeftString	= figOut
+		test_plot_map(type, figOut, datDiff(nt-1,:,:), res)
+		;test_plot_map_polar(type, figOut, datDiff(nt-1,:,:), res)
+		res@gsnLeftString	= figOut2
+		test_plot_map(type, figOut2, dat2(nt-1,:,:), res)
+		;test_plot_map_polar(type, figOut2, dat2(nt-1,:,:), res)
+	end if
 end do
-;----------------------------------------------------------------------
-
-; Check the differences
-if (l_plot) then
-; plot a snapshot
-	type    = "ps"  ; plot type                                                                             
-	type@wkPaperWidthF  = 6
-	type@wkPaperHeightF = 4.5
-	type    = "x11"
-	filo = "diff"
-
-	res = True
-	res@gsnLeftString	= filo
-	test_plot_map(type, filo, datDiff(nt-1,:,:), res)
-end if
 
 end 
