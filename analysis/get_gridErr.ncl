@@ -1,4 +1,4 @@
-; This script get the RMSD of variables between two grids
+; This script get the mean differences and RMSD of variables between two grids
 ;
 ; Qing Li, 20170714
 
@@ -10,12 +10,17 @@ begin
 pData = "/Users/qingli/data_local/WW3"
 cName = "testIce"
 yyyymm = "200901"
-vars = (/"hs"/)
+vars = (/"hs", "t02", "fp"/)
 grid1 = "gx37"
 grid2 = "gx16b"
 ; input data
 inFile1 = pData+"/"+cName+"/"+grid1+"/ww3_"+yyyymm+".nc"
 inFile2 = pData+"/"+cName+"/"+grid2+"/ww3_"+yyyymm+".nc"
+; output data
+outFile = cName+"_gridErr_"+grid1+"_"+grid2+"_"+yyyymm+".out"
+; if plot snapshot
+l_plot = False
+
 ; grid path
 dirGrid = "../grids"
 ; source grid
@@ -39,8 +44,21 @@ f1 = addfile(inFile1, "r")
 lat1 = f1->latitude
 lon1 = f1->longitude
 f2 = addfile(inFile2, "r")
-lat2 = f1->latitude
-lon2 = f1->longitude
+lat2 = f2->latitude
+lon2 = f2->longitude
+time = f1->time
+nt = dimsizes(time)
+;print(nt)
+; averaging window
+inds = nt/2
+inde = nt-1
+
+; write header
+if (.not. isfile(outFile)) then
+	write_table(outFile, "w", \
+	[/"VAR", "Mean ("+grid1+")", "Mean ("+grid2+")", "Mean Diff.", "RMSD", "RMS", "RMSD/RMS"/],\
+	 "%15s %15s %15s %15s %12s %12s %12s")
+end if
 
 ; loop over variables
 nVar = dimsizes(vars)
@@ -53,31 +71,43 @@ do i=0,nVar-1
 	dat2@lat2d = lat2
 	dat2@lon2d = lon2
 	dat1Regrid = ESMF_regrid_with_weights(dat1, wgtFileName, opt)
-	printVarSummary(dat1Regrid)
-	printMinMax(dat1, 1)
-	printMinMax(dat1Regrid, 1)
-	printVarSummary(dat2)
-	printMinMax(dat2, 1)
+	;; check regridding
+	;printVarSummary(dat1Regrid)
+	;printMinMax(dat1, 1)
+	;printMinMax(dat1Regrid, 1)
+	;printVarSummary(dat2)
+	;printMinMax(dat2, 1)
+	;; check difference
 	datDiff = dat1Regrid
 	datDiff = (/dat1Regrid-dat2/)
-	minMeanDiff = dim_min_n(datDiff, (/1, 2/))
-	maxMeanDiff = dim_max_n(datDiff, (/1, 2/))
-	print(maxMeanDiff)
 	printMinMax(datDiff, 1)
 	; calculate the root mean square difference
 	rmsd = wgt_arearmse(dat1Regrid, dat2, 1.0, 1.0, 0)
-	print(rmsd)
+	;print(rmsd)
+	rmsd_tavg = avg(rmsd(inds:inde))
+	;print(rmsd_tavg)
 	; calculate the root mean square value on grid2
 	zeros = dat2
 	zeros = (/dat2*0.0/)
 	rms  = wgt_arearmse(zeros, dat2, 1.0, 1.0, 0)
-	print(rms)
+	;print(rms)
+	rms_tavg = avg(rms(inds:inde))	
+	;print(rms_tavg)
+	nrmsd_tavg = rmsd_tavg/rms_tavg
+	; calculate the mean and difference
+	dat1Mean = avg(dat1(inds:inde,:,:))	
+	dat2Mean = avg(dat2(inds:inde,:,:))
+	meanDiff = dat1Mean-dat2Mean
+	;print(dat1Mean)
+	;print(dat2Mean)
+	;print(meanDiff)
+	write_table(outFile, "a", \
+		[/var+" ("+dat1@units+")", dat1Mean, dat2Mean, meanDiff, rmsd_tavg, rms_tavg, nrmsd_tavg/], \
+		 "%15s %15.2f %15.2f %15.2f %12.2f %12.2f %12.2f")
 end do
 ;----------------------------------------------------------------------
-;	write_table(outfile, wtype, [/casen,rmse,rmse_s,rmse_e/], "%15s %6.2f %6.2f %6.2f")
 
 ; Check the differences
-l_plot = True
 if (l_plot) then
 ; plot a snapshot
 	type    = "ps"  ; plot type                                                                             
@@ -88,8 +118,7 @@ if (l_plot) then
 
 	res = True
 	res@gsnLeftString	= filo
-	nt = 119
-	test_plot_map(type, filo, dat1(nt,:,:), res)
+	test_plot_map(type, filo, datDiff(nt-1,:,:), res)
 end if
 
 end 
