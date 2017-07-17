@@ -67,6 +67,7 @@ else
 fi
 export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
 
+
 ## 0. Preprocessing -----------------------------------------------------------
 print_title "Preprocessing"
 
@@ -130,10 +131,10 @@ cp ${path_b}/link.${compstr} ${path_b}/link
 if [[ ${f_new} == yes ]]; then
 	${path_b}/w3_clean all
 	${path_b}/w3_new
+	# check error
+	check_error "Error in w3_new. Stop..."
 fi
 
-# check error
-check_error "Error in Step 0. Stop..."
 
 ## 1. Grid pre-processor ------------------------------------------------------
 if [[ ${f_grid} == yes ]]; then
@@ -142,6 +143,8 @@ if [[ ${f_grid} == yes ]]; then
 	# compile appropriate code
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_grid
+	# check error
+	check_error "Error in compiling ww3_grid. Stop..."
 	cp ${path_e}/ww3_grid ${path_exe}/
 
 	rm -f mod_def.*
@@ -160,10 +163,9 @@ if [[ ${f_grid} == yes ]]; then
 	if [[ ${gridtype} != ww3a ]]; then
 		mv ${gridtype}_[xy].inp ${path_work}/grid_inp
 	fi
-	# check error
-	check_error "Error in Step 1. Stop..."
 
 fi
+
 
 ## 2. Initial conditions ------------------------------------------------------
 print_title "Initial conditions"
@@ -182,6 +184,8 @@ else
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_strt
+	# check error
+	check_error "Error in compiling ww3_strt. Stop..."
 	cp ${path_e}/ww3_strt ${path_exe}/
 	path_strt="${toolbox_dir}/data/strt_inp"
 	cp ${path_strt}/ww3_strt.inp ./
@@ -192,8 +196,6 @@ else
 	mv ww3_strt.inp strt_inp/
 fi
 
-# check error
-check_error "Error in Step 2. Stop..."
 
 ## 3. Input fields ------------------------------------------------------------
 # update input files
@@ -203,6 +205,8 @@ if [[ ${opt_input} == core2update ]]; then
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
+	# check error
+	check_error "Error in compiling ww3_prnc. Stop..."
 	cp ${path_e}/ww3_prnc ${path_exe}
 	path_prnc="${toolbox_dir}/data/prnc_inp"
 
@@ -223,9 +227,6 @@ if [[ ${opt_input} == core2update ]]; then
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_ice.out
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
 	rm ice.nc
-	
-	# check error
-	check_error "Error in Step 3. Stop..."
 elif [[ ${opt_input} == core2copy ]]; then
 	ln -s ${path_input}/${gridtype}_wind.ww3 ./wind.ww3
 	ln -s ${path_input}/${gridtype}_ice.ww3 ./ice.ww3
@@ -235,6 +236,8 @@ elif [[ ${opt_input} == cice ]]; then
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
+	# check error
+	check_error "Error in compiling ww3_prnc. Stop..."
 	cp ${path_e}/ww3_prnc ${path_exe}
 	path_prnc="${toolbox_dir}/data/prnc_inp"
 	
@@ -262,6 +265,7 @@ else
 	exit 1
 fi
 
+
 ## 4. Main program ------------------------------------------------------------
 print_title "Main program"
 
@@ -272,6 +276,8 @@ else
 	echo ${case_switch_ser} > ${path_b}/switch
 fi
 ${path_b}/w3_make ww3_shel
+# check error
+check_error "Error in compiling ww3_shel. Stop..."
 cp ${path_e}/ww3_shel ${path_exe}/
 
 # processing input file
@@ -283,8 +289,6 @@ find_replace LB_TIME_INT ${dt} ww3_shel.inp
 find_replace LB_TIME_RES ${dtrs} ww3_shel.inp
 mkdir -p shel_inp
 
-# check error
-check_error "Error in Step 4. Stop..."
 
 ## 5. Gridded netCDF output post-processor ------------------------------------
 print_title "Gridded netCDF output post-processor"
@@ -292,6 +296,8 @@ print_title "Gridded netCDF output post-processor"
 # compile appropriate code
 echo ${case_switch_ser} > ${path_b}/switch
 ${path_b}/w3_make ww3_ounf
+# check error
+check_error "Error in ww3_ounf. Stop..."
 cp ${path_e}/ww3_ounf ${path_exe}/
 
 # processing input file
@@ -309,8 +315,6 @@ nnn_res=`printf %03d ${nres}`
 sav_res="restart${nnn_res}.ww3"
 rname_res="restart_${date_end}.ww3"
 
-# check error
-check_error "Error in Step 5. Stop..."
 
 ## 6. Submitting job ----------------------------------------------------------
 print_title "Submitting job"
@@ -419,8 +423,6 @@ mv ${sav_res} restart/${rname_res}
 
 EOF
 
-# check error
-check_error "Error in Step 6. Stop..."
 
 # submitting job
 chmod 755 submit.sh

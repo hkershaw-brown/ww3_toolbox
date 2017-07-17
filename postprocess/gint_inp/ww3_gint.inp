@@ -3,7 +3,7 @@ $ WAVEWATCH III Grid integration input file                            $
 $ -------------------------------------------------------------------- $
 $ Time, time increment and number of outputs
 $
-  19680606 060000 10800. 1
+   LB_STARTING_TIME LB_TIME_INT LB_NFILE
 $
 $ Total number of grids (NGR). The code assumes that the first NGR-1  
 $ grids are the input grids and the last grid is the target grid in 
@@ -12,14 +12,14 @@ $ that all the grids have the same output fields switched on
 $
 $ NGR
 $
- 4
+  3
 $
 $ Grid Ids
 $
- 'grd1'
- 'grd2'
- 'grd3'
- 'grd4'
+ 'LB_GRID1'
+ 'LB_GRID2'
+ 'LB_GRID3'
+ 'LB_TARGET_GRID'
 $
 $ In this example grd1, grd2 and grd3 are the input grids. For each
 $ of these grids a mod_def.grdN and an out_grd.grdN are available.

@@ -4,6 +4,7 @@
 # using multiple grids on Yellowstone/Cheyenne.
 #
 # Qing Li, 20170713
+#		   20170717 set up for a grid set of 3
 
 ## load shared functions ------------------------------------------------------
 source ./share/bash_functions.sh
@@ -17,6 +18,7 @@ if [[ ${gridtype} == mww3a ]]; then
 	grid3="gx16b_np"
 	grids="${grid1} ${grid2} ${grid3}"  # combination of gx16b_sp, gx37b_eq and gx16b_np
 	inputgrid="gx16b"
+	targetgrid=${inputgrid}
 else
 	echo "Grid type ${gridtype} not supported. Stop."
 	exit 1
@@ -76,6 +78,7 @@ else
 fi
 export WWATCH3_ENV="${ww3_dir}/wwatch3.env"
 
+
 ## 0. Preprocessing -----------------------------------------------------------
 print_title "Preprocessing"
 
@@ -87,20 +90,20 @@ nday=$(( ${nsec}/86400 ))
 nfile=$(( ${nsec}/${dt} ))
 nres=$(( ${nsec}/${dtrs} ))
 
-## spatial dimensions
-#if [[ ${gridtype} == gx37 ]]; then
-#	nx=100
-#	ny=116
-#elif [[ ${gridtype} == gx16* ]]; then
-#	nx=320
-#	ny=384
-#elif [[ ${gridtype} == ww3a ]]; then
-#	nx=90
-#	ny=50
-#else
-#	echo "Grid type ${gridtype} not supported"
-#	exit 1
-#fi
+# spatial dimensions
+if [[ ${targetgrid} == gx37 ]]; then
+	nx=100
+	ny=116
+elif [[ ${targetgrid} == gx16* ]]; then
+	nx=320
+	ny=384
+elif [[ ${targetgrid} == ww3a ]]; then
+	nx=90
+	ny=50
+else
+	echo "Grid type ${targetgrid} not supported"
+	exit 1
+fi
 
 # set path
 path_e="${ww3_dir}/exe"            # path for executables
@@ -132,10 +135,10 @@ cp ${path_b}/link.${compstr} ${path_b}/link
 if [[ ${f_new} == yes ]]; then
 	${path_b}/w3_clean all
 	${path_b}/w3_new
+	# check error
+	check_error "Error in w3_new. Stop..."
 fi
 
-# check error
-check_error "Error in Step 0. Stop..."
 
 ## 1. Grid pre-processor ------------------------------------------------------
 if [[ ${f_grid} == yes ]]; then
@@ -144,6 +147,8 @@ if [[ ${f_grid} == yes ]]; then
 	# compile appropriate code
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_grid
+	# check error
+	check_error "Error in compiling ww3_grid. Stop..."
 	cp ${path_e}/ww3_grid ${path_exe}/
 
 	rm -f mod_def.*
@@ -167,9 +172,8 @@ if [[ ${f_grid} == yes ]]; then
 		fi
 		mv mod_def.ww3 mod_def.${grd}
 	done
-	# check error
-	check_error "Error in Step 1. Stop..."
 fi
+
 
 ## 2. Initial conditions ------------------------------------------------------
 print_title "Initial conditions"
@@ -188,6 +192,8 @@ else
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_strt
+	# check error
+	check_error "Error in compiling ww3_strt. Stop..."
 	cp ${path_e}/ww3_strt ${path_exe}/
 	path_strt="${toolbox_dir}/data/strt_inp"
 	cp ${path_strt}/ww3_strt.inp ./
@@ -198,8 +204,6 @@ else
 	mv ww3_strt.inp strt_inp/
 fi
 
-# check error
-check_error "Error in Step 2. Stop..."
 
 ## 3. Input fields ------------------------------------------------------------
 # update input files
@@ -209,6 +213,8 @@ if [[ ${opt_input} == core2update ]]; then
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
+	# check error
+	check_error "Error in compiling ww3_prnc. Stop..."
 	cp ${path_e}/ww3_prnc ${path_exe}
 	path_prnc="${toolbox_dir}/data/prnc_inp"
 
@@ -231,9 +237,6 @@ if [[ ${opt_input} == core2update ]]; then
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
 	rm ice.nc
 	rm ww3_grid.ww3
-
-	# check error
-	check_error "Error in Step 3. Stop..."
 elif [[ ${opt_input} == core2copy ]]; then
 	ln -s ${path_input}/${inputgrid}_wind.ww3 ./wind.ww3
 	ln -s ${path_input}/${inputgrid}_ice.ww3 ./ice.ww3
@@ -243,6 +246,8 @@ elif [[ ${opt_input} == cice ]]; then
 	# compile appropriate code 
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
+	# check error
+	check_error "Error in compiling ww3_prnc. Stop..."
 	cp ${path_e}/ww3_prnc ${path_exe}
 	path_prnc="${toolbox_dir}/data/prnc_inp"
 	
@@ -272,12 +277,15 @@ else
 	exit 1
 fi
 
+
 ## 4. Main program ------------------------------------------------------------
 print_title "Main program"
 
 # compile appropriate code
 echo ${case_switch_mpi} > ${path_b}/switch
 ${path_b}/w3_make ww3_multi
+# check error
+check_error "Error in compiling ww3_multi. Stop..."
 cp ${path_e}/ww3_multi ${path_exe}/
 
 # processing input file
@@ -293,15 +301,37 @@ find_replace LB_GRID2 ${grid2} ww3_multi.inp
 find_replace LB_GRID3 ${grid3} ww3_multi.inp
 mkdir -p multi_inp
 
-# check error
-check_error "Error in Step 4. Stop..."
 
-## 5. Gridded netCDF output post-processor ------------------------------------
+## 5. Grid integration --------------------------------------------------------
+print_title "Grid integration"
+
+# compile appropriate code
+echo ${case_switch_ser} > ${path_b}/switch
+${path_b}/w3_make ww3_gint
+# check error
+check_error "Error in compiling ww3_gint. Stop..."
+cp ${path_e}/ww3_gint ${path_exe}/
+
+path_ounf="${toolbox_dir}/postprocess/gint_inp"
+cp ${path_ounf}/ww3_gint.inp ./
+find_replace LB_STARTING_TIME ${t_beg} ww3_gint.inp
+find_replace LB_TIME_INT ${dt} ww3_gint.inp
+find_replace LB_NFILE ${nfile} ww3_gint.inp
+find_replace LB_GRID1 ${grid1} ww3_gint.inp
+find_replace LB_GRID2 ${grid2} ww3_gint.inp
+find_replace LB_GRID3 ${grid3} ww3_gint.inp
+find_replace LB_TARGET_GRID ${targetgrid} ww3_gint.inp
+mkdir -p gint_inp
+
+
+## 6. Gridded netCDF output post-processor ------------------------------------
 print_title "Gridded netCDF output post-processor"
 
 # compile appropriate code
 echo ${case_switch_ser} > ${path_b}/switch
 ${path_b}/w3_make ww3_ounf
+# check error
+check_error "Error in compiling ww3_ounf. Stop..."
 cp ${path_e}/ww3_ounf ${path_exe}/
 
 # processing input file
@@ -319,10 +349,8 @@ nnn_res=`printf %03d ${nres}`
 sav_res="restart${nnn_res}.ww3"
 rname_res="restart_${date_end}.ww3"
 
-# check error
-check_error "Error in Step 5. Stop..."
 
-## 6. Submitting job ----------------------------------------------------------
+## 7. Submitting job ----------------------------------------------------------
 print_title "Submitting job"
 
 echo "  Running WW3 with ${nproc} processors..."
@@ -412,6 +440,8 @@ echo "  Log files routed to ${path_out}"
 mv log.* ${path_out}/
 mv ww3_multi.inp multi_inp/
 
+${path_exe}/ww3_gint > ${path_out}/ww3_gint.out
+mv ww3_gint.inp gint_inp/
 ${path_exe}/ww3_ounf > ${path_out}/ww3_ounf.out
 mv ww3_ounf.inp ounf_inp/
 mv ww3.*.nc out/
@@ -419,8 +449,6 @@ mv ${sav_res} restart/${rname_res}
 
 EOF
 
-# check error
-check_error "Error in Step 6. Stop..."
 
 # submitting job
 chmod 755 submit.sh

@@ -9,7 +9,7 @@ begin
 ; data path
 pData = "/Users/qingli/data_local/WW3"
 cName = "testIce"
-yyyymm = "200901"
+yyyymm = "200907"
 vars = (/"hs", "t02", "fp", "ust", "uss", "tus"/)
 isVector = (/False, False, False, True, True, True/)
 grid1 = "gx37"
