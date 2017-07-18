@@ -43,7 +43,7 @@ $ UST CHA CGE FAW TAW TWA WCC WCF WCH WCM
 $ (6) Wave-Ocean layer
   T
 $ SXY TWO BHD FOC TUS USS P2S USF P2L TWI FIC
-  T   T   T   T   T   T   T   T   T   T   T
+  T   T   T   T   T   T   T   F   F   T   T
 $ (7) Wave-bottom layer
   F
 $ ABR UBR BED FBB TBB

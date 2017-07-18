@@ -283,8 +283,8 @@ cp ${path_e}/ww3_shel ${path_exe}/
 # processing input file
 path_shel="${toolbox_dir}/run/shel_inp"
 cp ${path_shel}/ww3_shel.inp ./
-find_replace LB_STARTING_TIME ${t_beg} ww3_shel.inp
-find_replace LB_ENDING_TIME ${t_end} ww3_shel.inp
+find_replace LB_STARTING_TIME "${t_beg}" ww3_shel.inp
+find_replace LB_ENDING_TIME "${t_end}" ww3_shel.inp
 find_replace LB_TIME_INT ${dt} ww3_shel.inp
 find_replace LB_TIME_RES ${dtrs} ww3_shel.inp
 mkdir -p shel_inp
@@ -303,7 +303,7 @@ cp ${path_e}/ww3_ounf ${path_exe}/
 # processing input file
 path_ounf="${toolbox_dir}/postprocess/ounf_inp"
 cp ${path_ounf}/ww3_ounf.inp ./
-find_replace LB_STARTING_TIME ${t_beg} ww3_ounf.inp
+find_replace LB_STARTING_TIME "${t_beg}" ww3_ounf.inp
 find_replace LB_TIME_INT ${dt} ww3_ounf.inp
 find_replace LB_NFILE ${nfile} ww3_ounf.inp
 find_replace LB_NX ${nx} ww3_ounf.inp

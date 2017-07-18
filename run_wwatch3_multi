@@ -11,14 +11,16 @@ source ./share/bash_functions.sh
 
 ## Run control ----------------------------------------------------------------
 # case name
+# CURVILINEAR GRID SUPPORT NOT IMPLEMENTED FOR NRGRD > 1!
+# Should try curvilinear at north polar region and regular elsewhere
 gridtype="mww3a"  # grid type: mww3a
 if [[ ${gridtype} == mww3a ]]; then
 	grid1="gx16b_sp"
 	grid2="gx37b_eq"
 	grid3="gx16b_np"
 	grids="${grid1} ${grid2} ${grid3}"  # combination of gx16b_sp, gx37b_eq and gx16b_np
-	inputgrid="gx16b"
-	targetgrid=${inputgrid}
+	inputgrid="" # curvilinear not supported for input grid
+	targetgrid="gx16b"
 else
 	echo "Grid type ${gridtype} not supported. Stop."
 	exit 1
@@ -35,7 +37,7 @@ dtrs="86400"             # restart interval
 # restart run or not
 f_restart="no"
 # clean old exes and build new ones
-f_new="yes"
+f_new="no"
 # update grid
 f_grid="yes"
 # input file options: core2update, core2copy, cice, none
@@ -51,8 +53,9 @@ queue="regular"
 #projnum="UBRN0005"
 
 # set switch
-case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
+case_switch_base="F90 NOGRB NOPA LRB4 NC4 SCRIP SCRIPNC PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
 "NL1 TR0 BS0 IC2 IS2 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
+case_switch_ser="${case_switch_base} SHRD"
 case_switch_mpi="${case_switch_base} MPI DIST"
 
 # specify compiler string (as per in ww3_dir/bin options) here:
@@ -143,7 +146,7 @@ fi
 ## 1. Grid pre-processor ------------------------------------------------------
 if [[ ${f_grid} == yes ]]; then
 	print_title "Grid preprocessor"
-	
+
 	# compile appropriate code
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_grid
@@ -154,10 +157,11 @@ if [[ ${f_grid} == yes ]]; then
 	rm -f mod_def.*
 	path_grid="${toolbox_dir}/grids/grid_inp"
 	mkdir -p grid_inp
-	
+
 	# loop over grids
-	for grd in ${grids} ${inputgrid}
+	for grd in ${grids} ${inputgrid} ${targetgrid}
 	do
+	if [ ! -f ./mod_def.${grd} ]; then
 		cp ${path_grid}/${grd}_bottom.inp ./
 		cp ${path_grid}/${grd}_mapsta.inp ./
 		if [[ ${grd} != ww3a* ]]; then
@@ -171,6 +175,7 @@ if [[ ${f_grid} == yes ]]; then
 			mv ${grd}_[xy].inp ${path_work}/grid_inp
 		fi
 		mv mod_def.ww3 mod_def.${grd}
+	fi
 	done
 fi
 
@@ -189,7 +194,7 @@ if [[ ${f_restart} == yes ]]; then
 	fi
 else
 	echo "Starting from initial condition...Preparing..."
-	# compile appropriate code 
+	# compile appropriate code
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_strt
 	# check error
@@ -198,8 +203,14 @@ else
 	path_strt="${toolbox_dir}/data/strt_inp"
 	cp ${path_strt}/ww3_strt.inp ./
 
-	echo "  Screen output routed to ${path_out}/ww3_strt.out"
-	${path_exe}/ww3_strt > ${path_out}/ww3_strt.out
+	for grd in ${grids}
+	do
+		rm -f mod_def.ww3
+		ln -s mod_def.${grd} mod_def.ww3
+		echo "  Screen output routed to ${path_out}/ww3_strt.${grd}.out"
+		${path_exe}/ww3_strt > ${path_out}/ww3_strt.${grd}.out
+		mv restart.ww3 restart.${grd}
+	done
 	mkdir -p strt_inp
 	mv ww3_strt.inp strt_inp/
 fi
@@ -210,7 +221,7 @@ fi
 if [[ ${opt_input} == core2update ]]; then
 	print_title "Input fields"
 
-	# compile appropriate code 
+	# compile appropriate code
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
 	# check error
@@ -219,7 +230,8 @@ if [[ ${opt_input} == core2update ]]; then
 	path_prnc="${toolbox_dir}/data/prnc_inp"
 
 	# prepare input fields
-	cp ww3_grid.${inputgrid} ww3_grid.ww3
+	rm -f mod_def.ww3
+	ln -s mod_def.${inputgrid} mod_def.ww3
 	# wind
 	ln -s ${path_dat}/wind.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
@@ -227,49 +239,75 @@ if [[ ${opt_input} == core2update ]]; then
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_wind.out
 	mkdir -p prnc_inp
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
-	rm wind.nc
-	
+	mv wind.ww3 wind.${inputgrid}
+	rm -f wind.nc
+
 	# ice
 	ln -s ${path_dat}/ice.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.ice ./ww3_prnc.inp
 	echo "  Screen output routed to ${path_out}/ww3_prnc_ice.out"
 	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_ice.out
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_ice.inp
-	rm ice.nc
-	rm ww3_grid.ww3
+	mv ice.ww3 ice.${inputgrid}
+	rm -f ice.nc mod_def.ww3
 elif [[ ${opt_input} == core2copy ]]; then
-	ln -s ${path_input}/${inputgrid}_wind.ww3 ./wind.ww3
-	ln -s ${path_input}/${inputgrid}_ice.ww3 ./ice.ww3
+	for grd in ${grids}
+	do
+		rm -f wind.${grd} ice*.${grd}
+		ln -s ${path_input}/wind.${grd} ./
+		ln -s ${path_input}/ice*.${grd} ./
+	done
 elif [[ ${opt_input} == cice ]]; then
 	print_title "Input fields"
 
-	# compile appropriate code 
+	# compile appropriate code
 	echo ${case_switch_ser} > ${path_b}/switch
 	${path_b}/w3_make ww3_prnc
 	# check error
 	check_error "Error in compiling ww3_prnc. Stop..."
 	cp ${path_e}/ww3_prnc ${path_exe}
 	path_prnc="${toolbox_dir}/data/prnc_inp"
-	
-	# copy wind
-	ln -s ${path_input}/${inputgrid}_wind.ww3 ./wind.ww3
-	
+	mkdir -p prnc_inp
+
+	# wind
+	ln -s ${path_dat}/wind.nc ./
+	cp ${path_prnc}/ww3_prnc.inp.wind ./ww3_prnc.inp
+	for grd in ${grids}
+	do
+		rm -f mod_def.ww3
+		ln -s mod_def.${grd} mod_def.ww3
+		echo "  Screen output routed to ${path_out}/ww3_prnc_wind.${grd}.out"
+		${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_wind.${grd}.out
+		mv wind.ww3 wind.${grd}
+	done
+	mv ww3_prnc.inp prnc_inp/ww3_prnc_wind.inp
+	rm -f wind.nc
+
 	# ice fraction
-	cp ww3_grid.${inputgrid} ww3_grid.ww3
 	ln -s ${path_dat}/cice.nc ./
 	cp ${path_prnc}/ww3_prnc.inp.cice.ice ./ww3_prnc.inp
-	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ice.out"
-	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ice.out
-	mkdir -p prnc_inp
+	for grd in ${grids}
+	do
+		rm -f mod_def.ww3
+		ln -s mod_def.${grd} mod_def.ww3
+		echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ice.${grd}.out"
+		${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ice.${grd}.out
+		mv ice.ww3 ice.${grd}
+	done
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ice.inp
-	
+
 	# ice thickness
 	cp ${path_prnc}/ww3_prnc.inp.cice.ic1 ./ww3_prnc.inp
-	echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ic1.out"
-	${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ic1.out
+	for grd in ${grids}
+	do
+		rm -f mod_def.ww3
+		ln -s mod_def.${grd} mod_def.ww3
+		echo "  Screen output routed to ${path_out}/ww3_prnc_cice_ic1.${grd}.out"
+		${path_exe}/ww3_prnc > ${path_out}/ww3_prnc_cice_ic1.${grd}.out
+		mv ice1.ww3 ice1.${grd}
+	done
 	mv ww3_prnc.inp prnc_inp/ww3_prnc_cice_ic1.inp
-	rm cice.nc
-	rm ww3_grid.ww3
+	rm -f cice.nc mod_def.ww3
 elif [[ ${opt_input} == none ]]; then
 	echo "Do nothing on input file. Please make sure wind.ww3 and ice.ww3 exist."
 else
@@ -291,11 +329,11 @@ cp ${path_e}/ww3_multi ${path_exe}/
 # processing input file
 path_multi="${toolbox_dir}/run/multi_inp"
 cp ${path_multi}/ww3_multi.inp ./
-find_replace LB_STARTING_TIME ${t_beg} ww3_multi.inp
-find_replace LB_ENDING_TIME ${t_end} ww3_multi.inp
+find_replace LB_STARTING_TIME "${t_beg}" ww3_multi.inp
+find_replace LB_ENDING_TIME "${t_end}" ww3_multi.inp
 find_replace LB_TIME_INT ${dt} ww3_multi.inp
 find_replace LB_TIME_RES ${dtrs} ww3_multi.inp
-find_replace LB_INPUT_GRID ${inputgrid} ww3_multi.inp
+#find_replace LB_INPUT_GRID ${inputgrid} ww3_multi.inp
 find_replace LB_GRID1 ${grid1} ww3_multi.inp
 find_replace LB_GRID2 ${grid2} ww3_multi.inp
 find_replace LB_GRID3 ${grid3} ww3_multi.inp
@@ -314,7 +352,7 @@ cp ${path_e}/ww3_gint ${path_exe}/
 
 path_ounf="${toolbox_dir}/postprocess/gint_inp"
 cp ${path_ounf}/ww3_gint.inp ./
-find_replace LB_STARTING_TIME ${t_beg} ww3_gint.inp
+find_replace LB_STARTING_TIME "${t_beg}" ww3_gint.inp
 find_replace LB_TIME_INT ${dt} ww3_gint.inp
 find_replace LB_NFILE ${nfile} ww3_gint.inp
 find_replace LB_GRID1 ${grid1} ww3_gint.inp
@@ -337,7 +375,7 @@ cp ${path_e}/ww3_ounf ${path_exe}/
 # processing input file
 path_ounf="${toolbox_dir}/postprocess/ounf_inp"
 cp ${path_ounf}/ww3_ounf.inp ./
-find_replace LB_STARTING_TIME ${t_beg} ww3_ounf.inp
+find_replace LB_STARTING_TIME "${t_beg}" ww3_ounf.inp
 find_replace LB_TIME_INT ${dt} ww3_ounf.inp
 find_replace LB_NFILE ${nfile} ww3_ounf.inp
 find_replace LB_NX ${nx} ww3_ounf.inp

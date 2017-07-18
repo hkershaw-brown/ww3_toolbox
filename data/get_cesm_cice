@@ -9,7 +9,7 @@ datadir=/glade/u/home/qingli/SCRATCH/archive/${casename}/ice/hist
 yyyy=99
 yyyy_str=`printf '%04d' ${yyyy}`
 # variables to extract
-vars='aice,hi,TLON,TLAT,time'
+vars='aice,hi,strocnx,strocny,strairx,strairy,TLON,TLAT,ULON,ULAT,time'
 # output directory
 outdir='.'
 # output file name
@@ -28,9 +28,6 @@ ncrcat -O -h tmp.??.nc ${outdir}/${outdata}
 # adjust time units and calendar (arbitrary)
 ncatted -O -a units,time,o,c,"days since 1910-12-24 00:00:00" ${outdir}/${outdata}
 ncatted -O -a calendar,time,o,c,"gregorian" ${outdir}/${outdata}
-
-# create soft link
-ln -s ${outdir}/${outdata} ${outdir}/cice.nc
 
 # clean up
 rm tmp.??.nc

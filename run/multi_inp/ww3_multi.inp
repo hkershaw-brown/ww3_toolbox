@@ -18,7 +18,7 @@ $   4) Output server type as in ww3_shel.inp
 $   5) Flag for dedicated process for unified point output.
 $   6) Flag for grids sharing dedicated output processes.
 $
-  3 1 F 1 T T
+  3 0 F 1 T T
 $
 $ -------------------------------------------------------------------- $
 $ If there are input data grids defined ( NRINP > 0 ), then these
@@ -28,7 +28,7 @@ $ a separate input line with MODID, and eight input flags identifying
 $ the presence of 1) water levels 2) currents 3) winds 4) ice and
 $ 5-7) assimilation data as in the file ww3_shel.inp.
 $
-  'LB_INPUT_GRID' F F T T F F F
+$  'LB_INPUT_GRID' F F T T F F F
 $
 $ -------------------------------------------------------------------- $
 $ If all point output is gathered in a unified point output file
@@ -65,9 +65,9 @@ $          grid.
 $    13)   Flag identifying dumping of boundary data used by this
 $          grid. If true, the file nest.MODID is generated.
 $
-  'LB_GRID1'  'no' 'no' 'LB_INPUT_GRID' 'LB_INPUT_GRID' 'no' 'no' 'no'   1  1  0.00 1.00  F
-  'LB_GRID2'  'no' 'no' 'LB_INPUT_GRID' 'LB_INPUT_GRID' 'no' 'no' 'no'   2  1  0.00 1.00  F
-  'LB_GRID3'  'no' 'no' 'LB_INPUT_GRID' 'LB_INPUT_GRID' 'no' 'no' 'no'   3  1  0.00 1.00  F
+  'LB_GRID1'  'no' 'no' 'native' 'native' 'no' 'no' 'no'   1  1  0.00 1.00  F
+  'LB_GRID2'  'no' 'no' 'native' 'native' 'no' 'no' 'no'   1  1  0.00 1.00  F
+  'LB_GRID3'  'no' 'no' 'native' 'native' 'no' 'no' 'no'   1  1  0.00 1.00  F
 $
 $ In this example three grids are used requiring the files
 $ mod_def.grdN. All files get their winds from the grid 'input'
@@ -124,7 +124,7 @@ $ UST CHA CGE FAW TAW TWA WCC WCF WCH WCM
 $ (6) Wave-Ocean layer
   T
 $ SXY TWO BHD FOC TUS USS P2S USF P2L TWI FIC
-  T   T   T   T   T   T   T   T   T   T   T
+  T   T   T   T   T   T   T   F   F   T   T
 $ (7) Wave-bottom layer
   F
 $ ABR UBR BED FBB TBB  
