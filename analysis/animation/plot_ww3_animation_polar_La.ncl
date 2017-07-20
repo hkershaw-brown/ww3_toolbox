@@ -1,11 +1,9 @@
 ;
-; This script plots ww3 variables at polar regions
+; This script plots Langmuir number at polar regions
 ;
-; Li Qing, 20170630
+; Li Qing, 20170720
 
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "../share/ncl_procedures_functions.ncl"
 
 begin
 
@@ -17,19 +15,25 @@ begin
 
 ; define file names
 	gtype   = "gx16b"
-	yyyymm  = "200907"
-	casen	= "testIce_"+yyyymm+"_"+gtype
+	yyyymm  = "200901"
+	casen	= "testIce2_"+yyyymm+"_"+gtype
 	datadir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
 	diri	= datadir+casen+"/out/"
 	fili	= "ww3_"+yyyymm+".nc"
-	f	= addfile(diri+fili,"r")
+	infile	= diri+fili
+	f	= addfile(infile,"r")
+	diri2	= "../data/"
+	fili2	= "cice_2009.nc"
+	infile2	= diri2+fili2
+	f2	= addfile(infile2,"r")
+	; output per day
+	nout	= 4  ; 6 hourly data
 
 ; set variables
-	vars	= (/"hs"/)
-	minlv 	= (/0/)
-	maxlv 	= (/10/)
-	intlv	= (/0.25/)
-	nvar 	= dimsizes(vars)
+	var	= "la"
+	minlv 	= 0.1
+	maxlv 	= 1.0
+	intlv	= 0.05
 	l_ice   = True ; plot 15% and 85% ice line
 
 ; saved time step
@@ -46,6 +50,9 @@ begin
         nt = dimsizes(time)
 	ndsize  = dimsizes(dimsizes(lat))
 
+; water density
+	rhoo = 1000
+
 ; read ice
 if (l_ice) then
 	ice	= f->ice
@@ -55,13 +62,25 @@ if (l_ice) then
 	end if
 end if
 	
-; loop over variables
-do iv=0,nvar-1
-	var 	= vars(iv) 
-	print(var)
-
 ; read variables
-	dat	= f->$var$
+	; get stokes drift
+	results	= read_ww3_vector(infile, "uss")
+	uss	= results[0]
+	; remove zeros
+	uss0 = where(uss .eq. 0.0, uss@_FillValue, uss)
+
+	; get ice to ocean stress (daily data)
+	datX = f2->strocnx
+	datY = f2->strocny
+	tauIce = sqrt(datX^2+datY^2)
+	ustIce = sqrt(tauIce/rhoo)
+
+	dat = new(dimsizes(uss),typeof(uss))
+	do i=0,nt-1
+		j = toint(floor(i/nout))
+		dat(i,:,:) = sqrt(ustIce(j,:,:)/uss0(i,:,:))
+	end do
+
 	if (ndsize .eq. 2) then
 		dat@lat2d	= lat
 		dat@lon2d	= lon
@@ -77,8 +96,7 @@ do ip=0,npl-1
 	res@gsnDraw			= False
 	res@gsnFrame			= False
 	res@gsnAddCyclic		= True
-	res@gsnRightString		= var
-        res@lbTitleString               = dat@units
+	res@gsnRightString		= "La"
 	res@gsnMaximize			= True
 	res@gsnPaperOrientation		= "portrait" 
 	res@gsnPaperMargin		= 0.2
@@ -102,9 +120,9 @@ do ip=0,npl-1
 	res@cnFillMode 			= "CellFill"
 	res@gsnSpreadColors		= True
 	res@cnLevelSelectionMode	= "ManualLevels"
-	res@cnMinLevelValF      	= minlv(iv)
-	res@cnMaxLevelValF      	= maxlv(iv)
-	res@cnLevelSpacingF     	= intlv(iv)
+	res@cnMinLevelValF      	= minlv
+	res@cnMaxLevelValF      	= maxlv
+	res@cnLevelSpacingF     	= intlv
 	res@lbLabelBarOn 		= True
         res@lbOrientation       	= "vertical"    ; vertical label bar
         res@lbLeftMarginF		= 0.0
@@ -179,7 +197,5 @@ end do
 	system(cmd)
 
 end do ; end loop over polars
-
-end do ; end loop over variables
 
 end 
