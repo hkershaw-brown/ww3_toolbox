@@ -3,7 +3,7 @@
 ;
 ; Li Qing, 20170720
 
-load "../share/ncl_procedures_functions.ncl"
+load "../../share/ncl_procedures_functions.ncl"
 
 begin
 
@@ -22,7 +22,7 @@ begin
 	fili	= "ww3_"+yyyymm+".nc"
 	infile	= diri+fili
 	f	= addfile(infile,"r")
-	diri2	= "../data/"
+	diri2	= "../../data/"
 	fili2	= "cice_2009.nc"
 	infile2	= diri2+fili2
 	f2	= addfile(infile2,"r")
@@ -45,7 +45,7 @@ begin
 
 	lat	= f->latitude
 	lon	= f->longitude
-	time 	= f->time 
+	time 	= f->time
 	time@calendar = "julian"
         nt = dimsizes(time)
 	ndsize  = dimsizes(dimsizes(lat))
@@ -61,7 +61,7 @@ if (l_ice) then
 		ice@lon2d	= lon
 	end if
 end if
-	
+
 ; read variables
 	; get stokes drift
 	results	= read_ww3_vector(infile, "uss")
@@ -70,8 +70,8 @@ end if
 	uss0 = where(uss .eq. 0.0, uss@_FillValue, uss)
 
 	; get ice to ocean stress (daily data)
-	datX = f2->strocnx
-	datY = f2->strocny
+	datX = f2->strocnx_d
+	datY = f2->strocny_d
 	tauIce = sqrt(datX^2+datY^2)
 	ustIce = sqrt(tauIce/rhoo)
 
@@ -98,7 +98,7 @@ do ip=0,npl-1
 	res@gsnAddCyclic		= True
 	res@gsnRightString		= "La"
 	res@gsnMaximize			= True
-	res@gsnPaperOrientation		= "portrait" 
+	res@gsnPaperOrientation		= "portrait"
 	res@gsnPaperMargin		= 0.2
 	res@gsnPolar			= polar
 ; change the size of the image box
@@ -138,7 +138,7 @@ do ip=0,npl-1
 		ires@cnLevels			= (/0.15, 0.85/)   ; change contour interval
 		ires@cnLineColor 		= "white"
 		ires@cnLineThicknessF		= 1.5
-		ires@gsnLeftString		= ""    ; no string for plot2                                       
+		ires@gsnLeftString		= ""    ; no string for plot2
 		ires@gsnRightString		= ""
 		delete(ires@gsnPolar)       ; no longer in use for plot2
 		if (polar .eq. "NH") then
@@ -155,13 +155,13 @@ do ip=0,npl-1
 
 ; plot
 do it = 0, nt-1
-	it_str = sprinti("%03i", it) 
+	it_str = sprinti("%03i", it)
 	if (mod(it, 10) .eq. 0) then
 		print(it_str)
 	end if
 	time_str = sprinti("%08i", cd_calendar(time(it), -2))
 	filo	= var+"_"+it_str
-	wks	= gsn_open_wks(type, filo) 
+	wks	= gsn_open_wks(type, filo)
 	gsn_define_colormap(wks, "BlGrYeOrReVi200")
 	res@gsnLeftString = time_str
 	plot=gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
@@ -198,4 +198,4 @@ end do
 
 end do ; end loop over polars
 
-end 
+end

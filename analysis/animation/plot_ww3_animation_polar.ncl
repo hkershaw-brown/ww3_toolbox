@@ -3,8 +3,6 @@
 ;
 ; Li Qing, 20170630
 
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
 begin
@@ -22,18 +20,23 @@ begin
 	datadir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
 	diri	= datadir+casen+"/out/"
 	fili	= "ww3_"+yyyymm+".nc"
-	f	= addfile(diri+fili,"r")
+	infile	= diri+fili
+	f	= addfile(infile,"r")
 
 ; set variables
-	vars	= (/"hs"/)
-	minlv 	= (/0/)
-	maxlv 	= (/10/)
-	intlv	= (/0.25/)
+	vars	= (/"hs", "uss"/)
+	isVec	= (/False, True/)
+	minlv 	= (/0, 0/)
+	maxlv 	= (/10, 0.4/)
+	intlv	= (/0.25, 0.02/)
 	nvar 	= dimsizes(vars)
 	l_ice   = True ; plot 15% and 85% ice line
 
-; saved time step
-	svtstep = (/19, 68, 99, 119/)
+; working directory
+	dq 	= str_get_dq() ; double quote
+	dwork	= "tmp_"+systemfunc("date "+dq+"+%Y%m%d_%H%M%S"+dq)
+	cmd	= "mkdir -p "+dwork
+	system(cmd)
 
 ; polar regions
 	polars  = (/"NH", "SH"/)
@@ -41,7 +44,7 @@ begin
 
 	lat	= f->latitude
 	lon	= f->longitude
-	time 	= f->time 
+	time 	= f->time
 	time@calendar = "julian"
         nt = dimsizes(time)
 	ndsize  = dimsizes(dimsizes(lat))
@@ -54,14 +57,31 @@ if (l_ice) then
 		ice@lon2d	= lon
 	end if
 end if
-	
+
 ; loop over variables
 do iv=0,nvar-1
-	var 	= vars(iv) 
-	print(var)
+	var 	= vars(iv)
+	print("Variable: "+var)
 
 ; read variables
-	dat	= f->$var$
+	if (isVec(iv)) then
+		varX = "u"+var
+		varY = "v"+var
+		datX = f->$varX$
+		datY = f->$varY$
+		dat = sqrt(datX^2+datY^2)
+		dat@units = datX@units
+		dat@_FillValue = datX@_FillValue
+		dat@long_name = "magnitude of "+str_sub_str(datX@long_name, "eastward ","")
+		if (ndsize .eq. 2) then
+			datX@lat2d	= lat
+			datX@lon2d	= lon
+			datY@lat2d	= lat
+			datY@lon2d	= lon
+		end if
+	else
+		dat	= f->$var$
+	end if
 	if (ndsize .eq. 2) then
 		dat@lat2d	= lat
 		dat@lon2d	= lon
@@ -70,7 +90,7 @@ do iv=0,nvar-1
 ; loop over polar regions
 do ip=0,npl-1
 	polar	= polars(ip)
-	print(polar)
+	print("Polar region: "+polar)
 
 ; open workstation
 	res				= True
@@ -80,12 +100,17 @@ do ip=0,npl-1
 	res@gsnRightString		= var
         res@lbTitleString               = dat@units
 	res@gsnMaximize			= True
-	res@gsnPaperOrientation		= "portrait" 
+	res@gsnPaperOrientation		= "portrait"
 	res@gsnPaperMargin		= 0.2
 	res@gsnPolar			= polar
+	res@mpCenterLonF		= 0.0
+	res@mpShapeMode			= "FixedAspectFitBB"
 ; change the size of the image box
 	res@vpWidthF	= 0.4
 	res@vpHeightF	= 0.4
+	if (isVec(iv)) then
+		res@gsnScalarContour	= True
+	end if
 ; map
 	if (polar .eq. "NH") then
 		res@mpMinLatF	= 45
@@ -120,7 +145,7 @@ do ip=0,npl-1
 		ires@cnLevels			= (/0.15, 0.85/)   ; change contour interval
 		ires@cnLineColor 		= "white"
 		ires@cnLineThicknessF		= 1.5
-		ires@gsnLeftString		= ""    ; no string for plot2                                       
+		ires@gsnLeftString		= ""    ; no string for plot2
 		ires@gsnRightString		= ""
 		delete(ires@gsnPolar)       ; no longer in use for plot2
 		if (polar .eq. "NH") then
@@ -133,20 +158,42 @@ do ip=0,npl-1
 		delete(ires@cnMinLevelValF)
 		delete(ires@cnMaxLevelValF)
 		delete(ires@cnLevelSpacingF)
+		if (isatt(ires, "gsnScalarContour")) then
+			delete(ires@gsnScalarContour)
+		end if
+	end if
+
+; vector plot
+	if (isVec(iv)) then
+		res@vcRefMagnitudeF		= maxlv(iv)       ; define vector ref mag
+		res@vcRefLengthF		= 0.04            ; define length of vec ref
+		res@vcRefAnnoOrthogonalPosF	= -1.0            ; move ref vector
+		res@vcRefAnnoParallelPosF	= 0.95
+		res@vcRefAnnoArrowLineColor	= "black"         ; change ref vector color
+		res@vcRefAnnoArrowUseVecColor	= False
+		res@vcGlyphStyle		= "LineArrow"     ; turn on curley vectors
+		res@vcLineArrowColor		= "black"         ; change vector color
+		res@vcLineArrowThicknessF	= 0.8             ; change vector thickness
+		res@vcVectorDrawOrder		= "PostDraw"      ; draw vectors last
+		res@vcMinDistanceF		= 0.012		  ; space belween vectors
 	end if
 
 ; plot
 do it = 0, nt-1
-	it_str = sprinti("%03i", it) 
+	it_str = sprinti("%03i", it)
 	if (mod(it, 10) .eq. 0) then
-		print(it_str)
+		print("Step: "+it_str+"...")
 	end if
 	time_str = sprinti("%08i", cd_calendar(time(it), -2))
 	filo	= var+"_"+it_str
-	wks	= gsn_open_wks(type, filo) 
+	wks	= gsn_open_wks(type, dwork+"/"+filo)
 	gsn_define_colormap(wks, "BlGrYeOrReVi200")
 	res@gsnLeftString = time_str
-	plot=gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
+	if (isVec(iv)) then
+		plot=gsn_csm_vector_scalar_map_polar(wks,datX(it,:,:),datY(it,:,:),dat(it,:,:),res)
+	else
+		plot=gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
+	end if
 	if (l_ice) then
 		plot2 = gsn_csm_contour(wks,ice(it,:,:),ires)
 		overlay(plot,plot2)
@@ -155,7 +202,6 @@ do it = 0, nt-1
 	frame(wks)
 	delete(wks)
 end do
-
 	delete(res)
 
 ; create directory
@@ -163,23 +209,30 @@ end do
 	system(cmd)
 
 ; create gif
-	cmd = "convert -density 150 -delay 25 "+var+"_*.ps "+casen+"/"+var+"_"+yyyymm+"_"+gtype+"_"+polar+".gif"
+	print("Making a gif...")
+	cmd = "convert -density 150 -delay 25 "+dwork+"/"+var+"_*.ps "+casen+"/"+var+"_"+yyyymm+"_"+gtype+"_"+polar+".gif"
 	system(cmd)
 
-; save snapshots
-	nsv = dimsizes(svtstep)
-do is = 0, nsv-1
-	svtstep_str = sprinti("%03i", svtstep(is))
-	cmd = "mv "+var+"_"+svtstep_str+".ps "+casen+"/"+gtype+"_"+var+"_"+svtstep_str+"_"+polar+".ps"
+; save ps files
+	print("Saving .ps files in .tar.gz")
+	cmd = "tar -czvf "+casen+"_"+var+"_"+yyyymm+"_"+polar+"_ps.tar.gz -C "+dwork+" ."
 	system(cmd)
-end do
+	cmd = "mv *.tar.gz "+casen+"/"
+	system(cmd)
 
-; clean up .ps files
-	cmd = "rm "+var+"_*.ps"
+; clean up ps files
+	print("Cleaning up...")
+	cmd = "rm -f "+dwork+"/*.ps"
 	system(cmd)
 
 end do ; end loop over polars
 
 end do ; end loop over variables
 
-end 
+; clean up working directory
+	cmd = "rm -rf "+dwork
+	system(cmd)
+
+print("-- Done --")
+
+end
