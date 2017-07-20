@@ -8,6 +8,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 
+;;-----------------------------------------------------------------------------
+;; functions
+;;-----------------------------------------------------------------------------
+
 undef("get_gird_type")
 function get_grid_type(gName:string)
 ; Return grid type:
@@ -30,8 +34,42 @@ begin
 	delete(gMatchL)
 	delete(gMatchL2)
 	delete(gMatchC)
-end ; function
+end ; function get_grid_type
 
+undef("read_ww3_vector")
+function read_ww3_vector(inFile, var)
+; Return the magnitude and direction of a vector field "var" in the input
+; data "inFile"
+local f, lat, lon, var, varX, varY, datX, datY, dat, dir
+begin
+	f = addfile(inFile, "r")
+	lat = f->latitude
+	lon = f->longitude
+	varX = "u"+var
+	varY = "v"+var
+	datX = f->$varX$
+	datY = f->$varY$
+	; magnitude
+	dat = sqrt(datX^2+datY^2)
+	dat@lat2d = lat
+	dat@lon2d = lon
+	dat@units = datX@units
+	dat@_FillValue = datX@_FillValue
+	dat@long_name = "magnitude of "+str_sub_str(datX@long_name, "eastward ","")	
+	; direction
+	dir = atan2(datY, datX)
+	dir@lat2d = lat
+	dir@lon2d = lon
+	dir@_FillValue = datX@_FillValue
+	dir@units = "radians"
+	dir@long_name = "direction of "+str_sub_str(datX@long_name, "eastward ","")+" (anlge counterclockwise from east)"
+	return([/dat, dir/])
+end ; function read_ww3_vector
+
+
+;;-----------------------------------------------------------------------------
+;; procedures
+;;-----------------------------------------------------------------------------
 
 procedure check_regridding_weights(dirGrid:string, gTypeIn:string, \
 				gTypeOut:string, interpMethod:string)
@@ -126,7 +164,7 @@ begin
 		; clean up	
 		delete(opt)
 	end if
-end ; procedure
+end ; procedure check_regridding_weights
 
 
 procedure test_plot_map(type, figOut, dat, res)
@@ -175,7 +213,7 @@ begin
 	plot = gsn_csm_contour_map(wks, dat, opts)
 	draw(plot)
 	frame(wks)
-end ; procedure
+end ; procedure test_plot_map
 
 
 procedure test_plot_map_polar(type, figOut, dat, res)
@@ -236,5 +274,5 @@ begin
 		draw(plot)
 		frame(wks)
 	end do
-end ; procedure
+end ; procedure test_plot_map_polar
 
