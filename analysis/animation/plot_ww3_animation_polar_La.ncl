@@ -12,9 +12,9 @@ begin
 
 ; define file names
 	gType   = "gx16b"
-	yyyymm  = "200907"
+	yyyymm  = "200901"
 	cName	= "testIce2_"+yyyymm+"_"+gType
-	nHost	= systemfunc("`echo $HOSTNAME`")
+	nHost	= systemfunc("echo $HOSTNAME")
 	matchC	= str_match_ind_ic(nHost, "chace")
 	matchY	= str_match_ind_ic(nHost, "yslogin")
 	if (.not. ismissing(matchY)) then
@@ -94,24 +94,30 @@ end if
 	uss0 = where(uss .eq. 0.0, uss@_FillValue, uss)
 	delete(results)
 	; get wind stress
-	results = read_ww3_vector(inFile, "ust")
-	ust	= results[0]
-	ust	= (/ust*sqrt(rhoa/rhoo)/)
+	uust	= f->uust*sqrt(rhoa/rhoo)
+	vust	= f->vust*sqrt(rhoa/rhoo)
 
 	; get ice to ocean stress (daily data, ocean to ice stress) 
-	datX = f2->strocnx_d
-	datY = f2->strocny_d
-	tauIce = sqrt(datX^2+datY^2)
-	ustIce = sqrt(tauIce/rhoo)
-
-	ones   = where(ismissing(ice), ice@_FillValue, 1.0)
+	angle = f2->ANGLE
+	tauIceX = -1.0*f2->strocnx_d	; ocean to ice -> ice to ocean
+	tauIceY = -1.0*f2->strocny_d
+	ustIce = sqrt(sqrt(tauIceX^2+tauIceY^2)/rhoo)
 
 	dat = new(dimsizes(uss),typeof(uss))
+	; compile daily ice stress and 6 hourly wind stress
 	do i=0,nt-1
 		j = toint(floor(i/nout))
 		k = ind2(j)
 		print("Time: "+time2_str(k))
-		ustTot = ust(i,:,:)*(1.0-ice(k,:,:))+ustIce(k,:,:)*ice(k,:,:)
+		; convert x- and y-direction on gx16 to east- and west-direction
+		utauIce = tauIceX(k,:,:)*cos(angle)-tauIceY(k,:,:)*sin(angle)
+		vtauIce = tauIceX(k,:,:)*sin(angle)+tauIceY(k,:,:)*cos(angle)
+		ustDir = atan2(vtauIce, utauIce)
+		uustIce = ustIce(k,:,:)*cos(ustDir)
+		vustIce = ustIce(k,:,:)*sin(ustDir)
+		uustTot = uust(i,:,:)*(1.0-ice(k,:,:))+uustIce*ice(k,:,:)
+		vustTot = vust(i,:,:)*(1.0-ice(k,:,:))+vustIce*ice(k,:,:)
+		ustTot = sqrt(uustTot^2+vustTot^2)
 		dat(i,:,:) = sqrt(ustTot/uss0(i,:,:))
 	end do
 
@@ -190,7 +196,7 @@ do ip=0,npl-1
 	end if
 
 ; plot
-do it = 0, nt-1
+do it = 1, nt-1
 ;do it = 1, 1
 	it_str = sprinti("%03i", it)
 	if (mod(it, 10) .eq. 0) then
