@@ -1,0 +1,8 @@
+# This file sets up environment variables used in this toolbox
+#
+# source set_env to start
+#
+# Qing Li, 20170721
+
+export WW3_TOOLBOX_ROOT=`pwd`
+export PATH="${WW3_TOOLBOX_ROOT}/tools:${PATH}"

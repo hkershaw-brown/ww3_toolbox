@@ -6,21 +6,22 @@
 ;
 ; Li Qing, 20170720
 
-load "../../share/ncl_procedures_functions.ncl"
+load "$WW3_TOOLBOX_ROOT/share/ncl_procedures_functions.ncl"
 
 begin
 
 ; define file names
 	gType   = "gx16b"
-	yyyymm  = "200901"
+	yyyymm  = "200907"
 	cName	= "testIce2_"+yyyymm+"_"+gType
 	nHost	= systemfunc("echo $HOSTNAME")
 	matchC	= str_match_ind_ic(nHost, "chace")
 	matchY	= str_match_ind_ic(nHost, "yslogin")
+	ww3Root = systemfunc("echo $WW3_TOOLBOX_ROOT")
 	if (.not. ismissing(matchY)) then
 		datDir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
 		diri	= datDir+cName+"/out/"
-		diri2	= "../../data/"
+		diri2	= ww3Root+"/data/"
 	else if (.not. ismissing(matchC)) then
 		datDir = "/Users/qingli/data_local/WW3/"
 		diri	= datDir+cName+"/"
@@ -79,7 +80,7 @@ begin
 
 ; read ice
 if (l_ice) then
-	ice	= f2->aice_d
+	ice	= f->ice
 	if (ndsize .eq. 2) then
 		ice@lat2d	= lat
 		ice@lon2d	= lon
@@ -115,8 +116,8 @@ end if
 		ustDir = atan2(vtauIce, utauIce)
 		uustIce = ustIce(k,:,:)*cos(ustDir)
 		vustIce = ustIce(k,:,:)*sin(ustDir)
-		uustTot = uust(i,:,:)*(1.0-ice(k,:,:))+uustIce*ice(k,:,:)
-		vustTot = vust(i,:,:)*(1.0-ice(k,:,:))+vustIce*ice(k,:,:)
+		uustTot = uust(i,:,:)*(1.0-ice(j,:,:))+uustIce*ice(j,:,:)
+		vustTot = vust(i,:,:)*(1.0-ice(j,:,:))+vustIce*ice(j,:,:)
 		ustTot = sqrt(uustTot^2+vustTot^2)
 		dat(i,:,:) = sqrt(ustTot/uss0(i,:,:))
 	end do
@@ -209,9 +210,7 @@ do it = 1, nt-1
 	res@gsnLeftString = time_str
 	plot=gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
 	if (l_ice) then
-		j = toint(floor(it/nout))
-		k = ind2(j)
-		plot2 = gsn_csm_contour(wks,ice(k,:,:),ires)
+		plot2 = gsn_csm_contour(wks,ice(it,:,:),ires)
 		overlay(plot,plot2)
 	end if
 	draw(plot)
@@ -232,7 +231,7 @@ end do
 
 ; save ps files
 	print("Saving .ps files in .tar.gz")
-	cmd = "tar -czf "+cName+"_"+var+"_"+yyyymm+"_"+polar+"_ps.tar.gz -C "+workDir+" ."
+	cmd = "tar -czf "+cName+"_"+var+"_"+polar+"_ps.tar.gz -C "+workDir+" ."
 	system(cmd)
 	cmd = "mv *.tar.gz "+cName+"/"
 	system(cmd)

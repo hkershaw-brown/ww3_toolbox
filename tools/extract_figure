@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# This script extracts figures at a selected time step from .tar.gz files
+#
+# Qing Li, 20170721
+
+cName=$1
+polar=$2
+num=$3
+vars="hs uss tus la"
+num_str=`printf %03d ${num}`
+
+for var in ${vars}
+do
+	inFile="${cName}_${var}_${polar}_ps.tar.gz"
+	echo ${inFile}
+	psFile="${var}_${num_str}.ps"
+	echo ${psFile}
+	tar -xzvf ${inFile} ${psFile}
+done
+

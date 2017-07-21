@@ -2,7 +2,7 @@
 ;
 ; Qing Li, 20170720
 
-load "../share/ncl_procedures_functions.ncl"
+load "$WW3_TOOLBOX_ROOT/share/ncl_procedures_functions.ncl"
 
 begin
 
@@ -14,7 +14,7 @@ vars = (/"ust", "uss"/)
 grid = "gx16b"
 ; input data
 inFile = pData+"/"+cName+"/"+grid+"/ww3_"+yyyymm+".nc"
-inFileIce = "../data/b1850_f19_gx1_ctrl_cice_0099.nc"
+inFileIce = "$WW3_TOOLBOX_ROOT/data/b1850_f19_gx1_ctrl_cice_0099.nc"
 
 ; if plot snapshot
 l_plot = True

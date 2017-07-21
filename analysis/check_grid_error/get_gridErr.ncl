@@ -2,7 +2,7 @@
 ;
 ; Qing Li, 20170714
 
-load "../../share/ncl_procedures_functions.ncl"
+load "$WW3_TOOLBOX_ROOT/share/ncl_procedures_functions.ncl"
 
 begin
 
@@ -23,7 +23,8 @@ outFile = cName+"_gridErr_"+grid1+"_"+grid2+"_"+yyyymm+".out"
 l_plot = True
 
 ; grid path
-dirGrid = "../../grids"
+ww3Root = systemfunc("echo $WW3_TOOLBOX_PATH")
+dirGrid = ww3Root+"/grids"
 ; source grid
 gTypeIn = grid1
 ; destination grid

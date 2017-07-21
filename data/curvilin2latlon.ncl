@@ -4,7 +4,7 @@
 ;
 ; Qing Li, 20170711
 
-load "../share/ncl_procedures_functions.ncl"
+load "$WW3_TOOLBOX_ROOT/share/ncl_procedures_functions.ncl"
 
 begin
 ; source grid
@@ -20,7 +20,8 @@ interpMethod = "bilinear"
 
 ; output files
 outFile = str_sub_str(inFile, ".nc", "_"+gTypeOut+".nc")
-dirGrid = "../grids"
+ww3Root = systemfunc("echo $WW3_TOOLBOX_ROOT")
+dirGrid = ww3Root+"/grids"
 wgtFileName = dirGrid+"/"+gTypeIn+"_to_"+gTypeOut+"_"+interpMethod+".nc"
 
 ; check regridding weights

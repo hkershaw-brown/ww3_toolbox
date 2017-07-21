@@ -9,7 +9,7 @@ begin
 
 ; define file names
 	gType   = "gx16b"
-	yyyymm  = "200907"
+	yyyymm  = "200901"
 	cName	= "testIce2_"+yyyymm+"_"+gType
 	nHost	= systemfunc("echo $HOSTNAME")
 	matchC	= str_match_ind_ic(nHost, "chace")
@@ -228,7 +228,7 @@ end do
 
 ; save ps files
 	print("Saving .ps files in .tar.gz")
-	cmd = "tar -czf "+cName+"_"+var+"_"+yyyymm+"_"+polar+"_ps.tar.gz -C "+workDir+" ."
+	cmd = "tar -czf "+cName+"_"+var+"_"+polar+"_ps.tar.gz -C "+workDir+" ."
 	system(cmd)
 	cmd = "mv *.tar.gz "+cName+"/"
 	system(cmd)

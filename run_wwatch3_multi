@@ -7,6 +7,7 @@
 #		   20170717 set up for a grid set of 3
 
 ## load shared functions ------------------------------------------------------
+source ./set_env
 source ./share/bash_functions.sh
 
 ## Run control ----------------------------------------------------------------
@@ -63,7 +64,7 @@ compstr="Intel"
 
 # set directory
 tmp_dir="/glade/scratch/qingli/wwatch3v5p16"
-toolbox_dir="/glade/u/home/qingli/src/ww3_toolbox"
+toolbox_dir=${WW3_TOOLBOX_ROOT}
 
 # set environment
 export WWATCH3_NETCDF="NC4"
