@@ -1,5 +1,8 @@
 ;
 ; This script plots Langmuir number at polar regions
+; The stress at the ocean surface should be a combination of stresses due
+; to wind and ice motions
+; Assuming both wave and ice data are on the same grid
 ;
 ; Li Qing, 20170720
 
@@ -7,26 +10,26 @@ load "../../share/ncl_procedures_functions.ncl"
 
 begin
 
-; define parameters
-	type	= "ps"  ; plot type
-	type@wkPaperWidthF  = 6
-	type@wkPaperHeightF = 6
-	;type	= "x11"
-
 ; define file names
-	gtype   = "gx16b"
-	yyyymm  = "200901"
-	casen	= "testIce2_"+yyyymm+"_"+gtype
-	datadir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
-	diri	= datadir+casen+"/out/"
+	gType   = "gx16b"
+	yyyymm  = "200907"
+	cName	= "testIce2_"+yyyymm+"_"+gType
+	nHost	= systemfunc("`echo $HOSTNAME`")
+	matchC	= str_match_ind_ic(nHost, "chace")
+	matchY	= str_match_ind_ic(nHost, "yslogin")
+	if (.not. ismissing(matchY)) then
+		datDir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
+		diri	= datDir+cName+"/out/"
+		diri2	= "../../data/"
+	else if (.not. ismissing(matchC)) then
+		datDir = "/Users/qingli/data_local/WW3/"
+		diri	= datDir+cName+"/"
+		diri2	= datDir
+	end if
+	end if
 	fili	= "ww3_"+yyyymm+".nc"
-	infile	= diri+fili
-	f	= addfile(infile,"r")
-	diri2	= "../../data/"
 	fili2	= "cice_2009.nc"
-	infile2	= diri2+fili2
-	f2	= addfile(infile2,"r")
-	; output per day
+	; number of output per day of ww3 data
 	nout	= 4  ; 6 hourly data
 
 ; set variables
@@ -36,13 +39,25 @@ begin
 	intlv	= 0.05
 	l_ice   = True ; plot 15% and 85% ice line
 
-; saved time step
-	svtstep = (/19, 68, 99, 119/)
+; working directory
+	dq 	= str_get_dq() ; double quote
+	workDir	= "tmp_"+systemfunc("date "+dq+"+%Y%m%d_%H%M%S"+dq)
+	cmd	= "mkdir -p "+workDir
+	system(cmd)
+
+; define parameters for figure type
+	type	= "ps"  ; plot type
+	type@wkPaperWidthF  = 6
+	type@wkPaperHeightF = 6
+	;type	= "x11"
 
 ; polar regions
 	polars  = (/"NH", "SH"/)
 	npl	= 2
 
+; read data
+	inFile	= diri+fili
+	f	= addfile(inFile,"r")
 	lat	= f->latitude
 	lon	= f->longitude
 	time 	= f->time
@@ -50,12 +65,21 @@ begin
         nt = dimsizes(time)
 	ndsize  = dimsizes(dimsizes(lat))
 
+	inFile2	= diri2+fili2
+	f2	= addfile(inFile2,"r")
+	time2	= f2->time
+	time2_str = sprinti("%08i", cd_calendar(time2, -2))	
+	ind2	= str_match_ind(time2_str, yyyymm)
+	;print(time2_str(ind2))
+
 ; water density
 	rhoo = 1000
+; air density
+	rhoa = 1.225
 
 ; read ice
 if (l_ice) then
-	ice	= f->ice
+	ice	= f2->aice_d
 	if (ndsize .eq. 2) then
 		ice@lat2d	= lat
 		ice@lon2d	= lon
@@ -64,21 +88,31 @@ end if
 
 ; read variables
 	; get stokes drift
-	results	= read_ww3_vector(infile, "uss")
+	results	= read_ww3_vector(inFile, "uss")
 	uss	= results[0]
 	; remove zeros
 	uss0 = where(uss .eq. 0.0, uss@_FillValue, uss)
+	delete(results)
+	; get wind stress
+	results = read_ww3_vector(inFile, "ust")
+	ust	= results[0]
+	ust	= (/ust*sqrt(rhoa/rhoo)/)
 
-	; get ice to ocean stress (daily data)
+	; get ice to ocean stress (daily data, ocean to ice stress) 
 	datX = f2->strocnx_d
 	datY = f2->strocny_d
 	tauIce = sqrt(datX^2+datY^2)
 	ustIce = sqrt(tauIce/rhoo)
 
+	ones   = where(ismissing(ice), ice@_FillValue, 1.0)
+
 	dat = new(dimsizes(uss),typeof(uss))
 	do i=0,nt-1
 		j = toint(floor(i/nout))
-		dat(i,:,:) = sqrt(ustIce(j,:,:)/uss0(i,:,:))
+		k = ind2(j)
+		print("Time: "+time2_str(k))
+		ustTot = ust(i,:,:)*(1.0-ice(k,:,:))+ustIce(k,:,:)*ice(k,:,:)
+		dat(i,:,:) = sqrt(ustTot/uss0(i,:,:))
 	end do
 
 	if (ndsize .eq. 2) then
@@ -101,6 +135,8 @@ do ip=0,npl-1
 	res@gsnPaperOrientation		= "portrait"
 	res@gsnPaperMargin		= 0.2
 	res@gsnPolar			= polar
+	res@mpCenterLonF		= 0.0
+	res@mpShapeMode			= "FixedAspectFitBB"
 ; change the size of the image box
 	res@vpWidthF	= 0.4
 	res@vpHeightF	= 0.4
@@ -155,18 +191,21 @@ do ip=0,npl-1
 
 ; plot
 do it = 0, nt-1
+;do it = 1, 1
 	it_str = sprinti("%03i", it)
 	if (mod(it, 10) .eq. 0) then
 		print("Step: "+it_str)
 	end if
 	time_str = sprinti("%08i", cd_calendar(time(it), -2))
 	filo	= var+"_"+it_str
-	wks	= gsn_open_wks(type, filo)
+	wks	= gsn_open_wks(type, workDir+"/"+filo)
 	gsn_define_colormap(wks, "BlGrYeOrReVi200")
 	res@gsnLeftString = time_str
 	plot=gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
 	if (l_ice) then
-		plot2 = gsn_csm_contour(wks,ice(it,:,:),ires)
+		j = toint(floor(it/nout))
+		k = ind2(j)
+		plot2 = gsn_csm_contour(wks,ice(k,:,:),ires)
 		overlay(plot,plot2)
 	end if
 	draw(plot)
@@ -177,25 +216,32 @@ end do
 	delete(res)
 
 ; create directory
-	cmd = "mkdir -p "+casen
+	cmd = "mkdir -p "+cName
 	system(cmd)
 
 ; create gif
-	cmd = "convert -density 150 -delay 25 "+var+"_*.ps "+casen+"/"+var+"_"+yyyymm+"_"+gtype+"_"+polar+".gif"
+	print("Making a gif...")
+	cmd = "convert -density 150 -delay 25 "+workDir+"/"+var+"_*.ps "+cName+"/"+var+"_"+yyyymm+"_"+gType+"_"+polar+".gif"
 	system(cmd)
 
-; save snapshots
-	nsv = dimsizes(svtstep)
-do is = 0, nsv-1
-	svtstep_str = sprinti("%03i", svtstep(is))
-	cmd = "mv "+var+"_"+svtstep_str+".ps "+casen+"/"+gtype+"_"+var+"_"+svtstep_str+"_"+polar+".ps"
+; save ps files
+	print("Saving .ps files in .tar.gz")
+	cmd = "tar -czf "+cName+"_"+var+"_"+yyyymm+"_"+polar+"_ps.tar.gz -C "+workDir+" ."
 	system(cmd)
-end do
+	cmd = "mv *.tar.gz "+cName+"/"
+	system(cmd)
 
-; clean up .ps files
-	cmd = "rm "+var+"_*.ps"
+; clean up ps files
+	print("Cleaning up...")
+	cmd = "rm -f "+workDir+"/*.ps"
 	system(cmd)
 
 end do ; end loop over polars
+
+; clean up working directory
+	cmd = "rm -rf "+workDir
+	system(cmd)
+
+	print("-- Done --")
 
 end

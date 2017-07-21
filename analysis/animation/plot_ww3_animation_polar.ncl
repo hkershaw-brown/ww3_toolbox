@@ -7,41 +7,53 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
 begin
 
-; define parameters
-	type	= "ps"  ; plot type
-	type@wkPaperWidthF  = 6
-	type@wkPaperHeightF = 6
-	;type	= "x11"
-
 ; define file names
-	gtype   = "gx16b"
+	gType   = "gx16b"
 	yyyymm  = "200907"
-	casen	= "testIce_"+yyyymm+"_"+gtype
-	datadir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
-	diri	= datadir+casen+"/out/"
+	cName	= "testIce2_"+yyyymm+"_"+gType
+	nHost	= systemfunc("echo $HOSTNAME")
+	matchC	= str_match_ind_ic(nHost, "chace")
+	matchY	= str_match_ind_ic(nHost, "yslogin")
+	if (.not. ismissing(matchY)) then
+		datDir = "/glade/u/home/qingli/SCRATCH/wwatch3v5p16/"
+		diri	= datDir+cName+"/out/"
+	else if (.not. ismissing(matchC)) then
+		datDir = "/Users/qingli/data_local/WW3/"
+		diri	= datDir+cName+"/"
+	else
+		print("Host "+nHost+" not supported")
+		exit()
+	end if
+	end if
 	fili	= "ww3_"+yyyymm+".nc"
-	infile	= diri+fili
-	f	= addfile(infile,"r")
 
 ; set variables
-	vars	= (/"hs", "uss"/)
-	isVec	= (/False, True/)
-	minlv 	= (/0, 0/)
-	maxlv 	= (/10, 0.4/)
-	intlv	= (/0.25, 0.02/)
-	nvar 	= dimsizes(vars)
+	vars	= (/ "hs", "uss", "tus", "wnd"/)
+	isVec	= (/False,  True,  True,  True/)
+	minlv 	= (/    0,     0,     0,     0/)
+	maxlv 	= (/   10,   0.4,     4,    25/)
+	intlv	= (/ 0.25,  0.02,   0.2,     1/)
 	l_ice   = True ; plot 15% and 85% ice line
 
 ; working directory
 	dq 	= str_get_dq() ; double quote
-	dwork	= "tmp_"+systemfunc("date "+dq+"+%Y%m%d_%H%M%S"+dq)
-	cmd	= "mkdir -p "+dwork
+	workDir	= "tmp_"+systemfunc("date "+dq+"+%Y%m%d_%H%M%S"+dq)
+	cmd	= "mkdir -p "+workDir
 	system(cmd)
 
 ; polar regions
 	polars  = (/"NH", "SH"/)
 	npl	= 2
 
+; define parameters for figure type
+	type	= "ps"  ; plot type
+	type@wkPaperWidthF  = 6
+	type@wkPaperHeightF = 6
+	;type	= "x11"
+
+; read data
+	inFile	= diri+fili
+	f	= addfile(inFile,"r")
 	lat	= f->latitude
 	lon	= f->longitude
 	time 	= f->time
@@ -59,6 +71,7 @@ if (l_ice) then
 end if
 
 ; loop over variables
+nvar 	= dimsizes(vars)
 do iv=0,nvar-1
 	var 	= vars(iv)
 	print("Variable: "+var)
@@ -179,20 +192,20 @@ do ip=0,npl-1
 	end if
 
 ; plot
-do it = 0, nt-1
+do it = 1, nt-1
 	it_str = sprinti("%03i", it)
 	if (mod(it, 10) .eq. 0) then
 		print("Step: "+it_str+"...")
 	end if
 	time_str = sprinti("%08i", cd_calendar(time(it), -2))
 	filo	= var+"_"+it_str
-	wks	= gsn_open_wks(type, dwork+"/"+filo)
+	wks	= gsn_open_wks(type, workDir+"/"+filo)
 	gsn_define_colormap(wks, "BlGrYeOrReVi200")
 	res@gsnLeftString = time_str
 	if (isVec(iv)) then
-		plot=gsn_csm_vector_scalar_map_polar(wks,datX(it,:,:),datY(it,:,:),dat(it,:,:),res)
+		plot = gsn_csm_vector_scalar_map_polar(wks,datX(it,:,:),datY(it,:,:),dat(it,:,:),res)
 	else
-		plot=gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
+		plot = gsn_csm_contour_map_polar(wks,dat(it,:,:),res)
 	end if
 	if (l_ice) then
 		plot2 = gsn_csm_contour(wks,ice(it,:,:),ires)
@@ -205,32 +218,40 @@ end do
 	delete(res)
 
 ; create directory
-	cmd = "mkdir -p "+casen
+	cmd = "mkdir -p "+cName
 	system(cmd)
 
 ; create gif
 	print("Making a gif...")
-	cmd = "convert -density 150 -delay 25 "+dwork+"/"+var+"_*.ps "+casen+"/"+var+"_"+yyyymm+"_"+gtype+"_"+polar+".gif"
+	cmd = "convert -density 150 -delay 25 "+workDir+"/"+var+"_*.ps "+cName+"/"+var+"_"+yyyymm+"_"+gType+"_"+polar+".gif"
 	system(cmd)
 
 ; save ps files
 	print("Saving .ps files in .tar.gz")
-	cmd = "tar -czvf "+casen+"_"+var+"_"+yyyymm+"_"+polar+"_ps.tar.gz -C "+dwork+" ."
+	cmd = "tar -czf "+cName+"_"+var+"_"+yyyymm+"_"+polar+"_ps.tar.gz -C "+workDir+" ."
 	system(cmd)
-	cmd = "mv *.tar.gz "+casen+"/"
+	cmd = "mv *.tar.gz "+cName+"/"
 	system(cmd)
 
 ; clean up ps files
 	print("Cleaning up...")
-	cmd = "rm -f "+dwork+"/*.ps"
+	cmd = "rm -f "+workDir+"/*.ps"
 	system(cmd)
 
 end do ; end loop over polars
 
+	delete(dat)
+	if (isvar("datX")) then
+		delete(datX)
+	end if
+	if (isvar("datY")) then
+		delete(datY)
+	end if
+
 end do ; end loop over variables
 
 ; clean up working directory
-	cmd = "rm -rf "+dwork
+	cmd = "rm -rf "+workDir
 	system(cmd)
 
 	print("-- Done --")
