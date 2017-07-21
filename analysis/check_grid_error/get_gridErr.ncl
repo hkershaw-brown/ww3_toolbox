@@ -2,7 +2,7 @@
 ;
 ; Qing Li, 20170714
 
-load "../share/ncl_procedures_functions.ncl"
+load "../../share/ncl_procedures_functions.ncl"
 
 begin
 
@@ -23,7 +23,7 @@ outFile = cName+"_gridErr_"+grid1+"_"+grid2+"_"+yyyymm+".out"
 l_plot = True
 
 ; grid path
-dirGrid = "../grids"
+dirGrid = "../../grids"
 ; source grid
 gTypeIn = grid1
 ; destination grid
@@ -66,18 +66,14 @@ do i=0,nVar-1
 	var = vars(i)
 	if (isVector(i)) then
 		; vector field
-		varX = "u"+vars(i)
-		varY = "v"+vars(i)
-		dat1X = f1->$varX$
-		dat1Y = f1->$varY$
-		dat1 = sqrt(dat1X^2+dat1Y^2)
-		dir1 = atan2(dat1Y, dat1X) * r2d
-		dat1@units = dat1X@units
-		dat2X = f2->$varX$
-		dat2Y = f2->$varY$
-		dat2 = sqrt(dat2X^2+dat2Y^2)
-		dir2 = atan2(dat2Y, dat2X) * r2d
-		dat2@units = dat2X@units
+		results = read_ww3_vector(inFile1, var)
+		dat1 = results[0]
+		dir1 = results[1]
+		delete(results)
+		results = read_ww3_vector(inFile2, var)
+		dat2 = results[0]
+		dir2 = results[1]
+		delete(results)
 		dat1Regrid = ESMF_regrid_with_weights(dat1, wgtFileName, opt)
 		dir1Regrid = ESMF_regrid_with_weights(dir1, wgtFileName, opt)
 	else
@@ -161,6 +157,14 @@ do i=0,nVar-1
 		test_plot_map(type, figOut2, dat2(nt-1,:,:), res)
 		;test_plot_map_polar(type, figOut2, dat2(nt-1,:,:), res)
 	end if
-end do
+	delete(dat1)
+	delete(dat2)
+	delete(dat1Regrid)
+	delete(datDiff)
+	delete(zeros)
+	if (isvar("dir1Regrid")) then
+		delete(dir1Regrid)
+	end if
+end do ; variables
 
 end 

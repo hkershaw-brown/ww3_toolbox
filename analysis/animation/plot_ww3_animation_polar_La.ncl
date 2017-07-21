@@ -89,7 +89,7 @@ end if
 ; loop over polar regions
 do ip=0,npl-1
 	polar	= polars(ip)
-	print(polar)
+	print("Polar region: "+polar)
 
 ; open workstation
 	res				= True
@@ -157,7 +157,7 @@ do ip=0,npl-1
 do it = 0, nt-1
 	it_str = sprinti("%03i", it)
 	if (mod(it, 10) .eq. 0) then
-		print(it_str)
+		print("Step: "+it_str)
 	end if
 	time_str = sprinti("%08i", cd_calendar(time(it), -2))
 	filo	= var+"_"+it_str
