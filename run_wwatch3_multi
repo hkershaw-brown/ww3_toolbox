@@ -165,15 +165,21 @@ if [[ ${f_grid} == yes ]]; then
 	if [ ! -f ./mod_def.${grd} ]; then
 		cp ${path_grid}/${grd}_bottom.inp ./
 		cp ${path_grid}/${grd}_mapsta.inp ./
-		if [[ ${grd} != ww3a* ]]; then
-			cp ${path_grid}/${grd}_[xy].inp ./
+		if [ -f ${path_grid}/${grd}_x.inp ]; then
+			cp ${path_grid}/${grd}_x.inp ./
+		fi
+		if [ -f ${path_grid}/${grd}_y.inp ]; then
+			cp ${path_grid}/${grd}_y.inp ./
 		fi
 		cp ${path_grid}/ww3_grid.inp.${grd} ./ww3_grid.inp
 		echo "  Screen output routed to ${path_out}/ww3_grid_${grd}.out"
 		${path_exe}/ww3_grid > ${path_out}/ww3_grid_${grd}.out
 		mv ${grd}_bottom.inp ${grd}_mapsta.inp ww3_grid.inp ${path_work}/grid_inp
-		if [[ ${grd} != ww3a* ]]; then
-			mv ${grd}_[xy].inp ${path_work}/grid_inp
+		if [ -f ${grd}_x.inp ]; then
+			mv ${grd}_x.inp ${path_work}/grid_inp
+		fi
+		if [ -f ${grd}_y.inp ]; then
+			mv ${grd}_y.inp ${path_work}/grid_inp
 		fi
 		mv mod_def.ww3 mod_def.${grd}
 	fi

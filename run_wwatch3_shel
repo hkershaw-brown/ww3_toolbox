@@ -152,8 +152,11 @@ if [[ ${f_grid} == yes ]]; then
 	path_grid="${toolbox_dir}/grids/grid_inp"
 	cp ${path_grid}/${gridtype}_bottom.inp ./
 	cp ${path_grid}/${gridtype}_mapsta.inp ./
-	if [[ ${gridtype} != ww3a ]]; then
-		cp ${path_grid}/${gridtype}_[xy].inp ./
+	if [ -f ${path_grid}/${grd}_x.inp ]; then
+		cp ${path_grid}/${grd}_x.inp ./
+	fi
+	if [ -f ${path_grid}/${grd}_y.inp ]; then
+		cp ${path_grid}/${grd}_y.inp ./
 	fi
 	cp ${path_grid}/ww3_grid.inp.${gridtype} ./ww3_grid.inp
 
@@ -161,8 +164,11 @@ if [[ ${f_grid} == yes ]]; then
 	${path_exe}/ww3_grid > ${path_out}/ww3_grid.out
 	mkdir -p grid_inp
 	mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ww3_grid.inp ${path_work}/grid_inp
-	if [[ ${gridtype} != ww3a ]]; then
-		mv ${gridtype}_[xy].inp ${path_work}/grid_inp
+	if [ -f ${grd}_x.inp ]; then
+		mv ${grd}_x.inp ${path_work}/grid_inp
+	fi
+	if [ -f ${grd}_y.inp ]; then
+		mv ${grd}_y.inp ${path_work}/grid_inp
 	fi
 
 fi
