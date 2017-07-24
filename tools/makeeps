@@ -1,21 +1,21 @@
 #!/bin/bash
 #
 # This script convert ps figures to eps 
-# Requires ps2eps
+# Requires ps2epsi
 #
 # Qing Li, 05/12/14 
 #          08/02/15, fixed a bug of deleting all .eps when there is no .ps
 
-which ps2eps
-if [ $? -ne 1 ]; then
-	echo "ps2eps required, but not found. Please make sure it is installed."
+which ps2epsi
+if [ $? -ne 0 ]; then
+	echo "ps2epsi required, but not found. Please make sure it is installed."
 	exit 1
 fi
 
 for f in *.ps; do
 	if [ -e $f ]; then
-		 rm ${f//ps/eps}
-		 ps2eps $f
+		 rm -f ${f//ps/eps}
+		 ps2epsi $f ${f//ps/eps}
 	fi
 done
 
