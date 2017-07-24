@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+# This script swap columns of bottom.inp and mapsta.inp for gx16b grid to
+# make lon start from 0 (instead of ~320)
+#
+# Qing Li, 20170724
+
+import numpy as np
+from astropy.io import ascii
+
+def main():
+    """
+    Read gx16b_sp_x.inp, swap columns of gx16b_sp_bottom.inp and
+    gx16b_sp_mapsta.inp to make lon start from 0
+    """
+    xRefFile = './grid_inp/gx16b_sp_x.inp'
+    mRefFile = './grid_inp/gx16b_sp_mapsta.inp'
+    bRefFile = './grid_inp/gx16b_sp_bottom.inp'
+    xOutFile = './grid_inp/gx16b_spr_x.inp'
+    mOutFile = './grid_inp/gx16b_spr_mapsta.inp'
+    bOutFile = './grid_inp/gx16b_spr_bottom.inp'
+
+    xDat = np.loadtxt(xRefFile, delimiter=' ')
+    mDat = np.loadtxt(mRefFile, delimiter=' ')
+    bDat = np.loadtxt(bRefFile, delimiter=' ')
+    lon = xDat[0,:]
+    nlon = len(lon)
+    print('Original longitude:\n')
+    print(lon)
+    #print(nlon)
+    ind = np.argmin(lon)
+    #print(ind)
+    xDatNew = np.zeros(xDat.shape)
+    xDatNew[:,0:nlon-ind] = xDat[:,ind:]
+    xDatNew[:,nlon-ind:] = xDat[:,0:ind]
+    print('New longitude:\n')
+    print(xDatNew[0,:])
+    mDatNew = np.zeros(mDat.shape)
+    mDatNew[:,0:nlon-ind] = mDat[:,ind:]
+    mDatNew[:,nlon-ind:] = mDat[:,0:ind]
+    bDatNew = np.zeros(bDat.shape)
+    bDatNew[:,0:nlon-ind] = bDat[:,ind:]
+    bDatNew[:,nlon-ind:] = bDat[:,0:ind]
+    print(xDat.shape)
+
+    #ascii.write(xDatNew, xOutFile, format='no_header',overwrite=True)
+    ascii.write(mDatNew, mOutFile, format='no_header',overwrite=True)
+    ascii.write(bDatNew, bOutFile, format='no_header',overwrite=True)
+
+if __name__ == "__main__":
+    main()

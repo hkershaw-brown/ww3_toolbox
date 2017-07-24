@@ -16,8 +16,8 @@ source ./share/bash_functions.sh
 # Should try curvilinear at north polar region and regular elsewhere
 gridtype="mww3a"  # grid type: mww3a
 if [[ ${gridtype} == mww3a ]]; then
-	grid1="gx16b_sp"
-	grid2="gx37b_eq"
+	grid1="gx16b_spr"
+	grid2="ww3a_eq"
 	grid3="gx16b_np"
 	grids="${grid1} ${grid2} ${grid3}"  # combination of gx16b_sp, gx37b_eq and gx16b_np
 	inputgrid="" # curvilinear not supported for input grid
@@ -38,7 +38,7 @@ dtrs="86400"             # restart interval
 # restart run or not
 f_restart="no"
 # clean old exes and build new ones
-f_new="no"
+f_new="yes"
 # update grid
 f_grid="yes"
 # input file options: core2update, core2copy, cice, none

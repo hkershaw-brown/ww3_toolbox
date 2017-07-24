@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+# This script extracts the low latitude fraction of grid ww3a
+#
+# Qing Li, 20170724
+
+import numpy as np
+from astropy.io import ascii
+
+def main():
+    """
+    Prepare ww3_grid.inp for ww3a_eq
+    """
+    mFile = './grid_inp/ww3a_mapsta.inp'
+    bFile = './grid_inp/ww3a_bottom.inp'
+    mOutFile = './grid_inp/ww3a_eq_mapsta.inp'
+    bOutFile = './grid_inp/ww3a_eq_bottom.inp'
+
+    mDat = np.loadtxt(mFile, delimiter=' ')
+    bDat = np.loadtxt(bFile, delimiter=' ')
+    #print(indat)
+    #print(xdat[0,:])
+    #print(ydat[0,:])
+
+    # setup ww3a grid
+    nlat = 50
+    nlon = 90
+    dlon = 360/nlon
+    mlat = 78.4
+    dlat = mlat*2/(nlat-1)
+    lat = np.arange(-mlat, mlat+dlat, dlat)
+    lon = np.arange(0, 360, dlon)
+    print(lat)
+    #print(lon)
+    latMin = -50.0
+    latMax = 50.0
+    ind0 = np.argmin(np.abs(lat-latMin))
+    ind1 = np.argmin(np.abs(lat-latMax))
+    print('Latitude range: {} - {}\n'.format(lat[ind0], lat[ind1]))
+    print('Index range: {} - {}\n'.format(ind0, ind1))
+    print(lat[ind0:ind1+1])
+
+    print(mDat.shape)
+    print(mDat[ind0:ind1+1,:].shape)
+    # write output
+    ascii.write(mDat[ind0:ind1+1,:], mOutFile, format='no_header', overwrite=True)
+    ascii.write(bDat[ind0:ind1+1,:], bOutFile, format='no_header', overwrite=True)
+
+if __name__ == "__main__":
+    main()
