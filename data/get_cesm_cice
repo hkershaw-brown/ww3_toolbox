@@ -1,33 +1,42 @@
 #!/bin/bash
 # This script gets sea ice fraction and sea ice thickness from 
-# CESM CICE output
+# CESM CICE daily output
 #
 # Qing Li, 20170711
 
-casename=b1850_f19_gx1_ctrl
+casename=giaf_gx1_ctrl
 datadir=/glade/u/home/qingli/SCRATCH/archive/${casename}/ice/hist
-yyyy=99
+yyyy=62 # year 62 under CORE II forcing, corresponding to 2009
+ryyyy=2009
 yyyy_str=`printf '%04d' ${yyyy}`
+ryyyy_str=`printf '%04d' ${ryyyy}`
 # variables to extract
-vars='aice,hi,strocnx,strocny,strairx,strairy,TLON,TLAT,ULON,ULAT,time'
+vars='aice_d,hi_d,strocnx_d,strocny_d,TLON,TLAT,ULON,ULAT,ANGLE,time'
 # output directory
 outdir='.'
 # output file name
 outdata=${casename}_cice_${yyyy_str}.nc
+outdata2=cice_${ryyyy_str}.nc
 
 # loop over months
 for mm in {1..12}; do
 	mm_str=`printf '%02d' ${mm}`
-	infile=${casename}.cice.h.${yyyy_str}-${mm_str}.nc
-	outfile=tmp.${mm_str}.nc
-	ncks -O -h -v ${vars} ${datadir}/${infile} ${outfile}
+	for infile in ${datadir}/${casename}.cice.h.${yyyy_str}-${mm_str}-??.nc
+	do
+		ftmp=`basename ${infile}`
+		outfile=tmp.${ftmp}
+		echo ${outfile}
+		ncks -O -h -v ${vars} ${infile} ${outfile}
+	done
 done
 # concatenate files
-ncrcat -O -h tmp.??.nc ${outdir}/${outdata}
+ncrcat -O -h tmp.*.nc ${outdir}/${outdata}
 
 # adjust time units and calendar (arbitrary)
-ncatted -O -a units,time,o,c,"days since 1910-12-24 00:00:00" ${outdir}/${outdata}
-ncatted -O -a calendar,time,o,c,"gregorian" ${outdir}/${outdata}
+ncap2 -O -s 'time=time-time(0)+0.5' ${outdir}/${outdata} ${outdir}/${outdata2}
+ncatted -O -a units,time,o,c,"days since 2009-01-01 00:00:00" ${outdir}/${outdata2}
+ncatted -O -a calendar,time,o,c,"gregorian" ${outdir}/${outdata2}
+ncatted -O -a long_name,time,o,c,"forcing year" ${outdir}/${outdata2}
 
 # clean up
-rm tmp.??.nc
+rm tmp.*.nc

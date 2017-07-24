@@ -12,11 +12,11 @@ gTypeIn = "gx16b"
 ; destination grid
 gTypeOut = "0.5x0.5"
 ; input file
-inFile	= "b1850_f19_gx1_ctrl_cice_0099.nc" 
+inFile	= "cice_2009.nc"
 ; fields to be remapped
 vars = (/"aice", "hi"/)
-; interpolation method
-interpMethod = "bilinear"
+; interpolation method (bilinear, patch, conserve, neareststod, nearestdtos)
+interpMethod = "patch"
 
 ; output files
 outFile = str_sub_str(inFile, ".nc", "_"+gTypeOut+".nc")
@@ -44,7 +44,8 @@ opt@PrintTimings   = True
 nvar = dimsizes(vars)
 do iv = 0,nvar-1
 	; read variable
-	dat = f->$vars(iv)$
+	var_in = vars(iv)+"_d"
+	dat = f->$var_in$
 	; remapping
 	datRegrid = ESMF_regrid_with_weights(dat, wgtFileName, opt)
 	printVarSummary(datRegrid)

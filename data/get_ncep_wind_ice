@@ -39,7 +39,7 @@ def main():
     fv10 = Dataset(data_path+'/'+fname_v10, 'r')
     v10 = fv10.variables['v_10']
     # output file
-    fout_wind = Dataset(out_path+'/wind.nc', 'w', format="NETCDF4")
+    fout_wind = Dataset(out_path+'/ncep_wind_2009.nc', 'w', format="NETCDF4")
     # dimensions
     nlon = lon.size
     nlat = lat.size
@@ -90,7 +90,7 @@ def main():
     tlat = fice.variables['tlat']
     ifrac = fice.variables['ifrac']
     # output file
-    fout_ice = Dataset(out_path+'/ice.nc', 'w', format="NETCDF4")
+    fout_ice = Dataset(out_path+'/ssmi_ice_2009.nc', 'w', format="NETCDF4")
     # dimensions
     nlon = fice.dimensions['nlon'].size
     nlat = fice.dimensions['nlat'].size

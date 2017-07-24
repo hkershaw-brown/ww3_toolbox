@@ -12,28 +12,28 @@ source ./share/bash_functions.sh
 ## Run control ----------------------------------------------------------------
 # case name
 gridtype="gx16b"  # grid type: gx16 or gx37 or ww3a
-casename="testIce_200907_${gridtype}"
+casename="testIce_2009_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
-t_beg="20090701 000000"  # first output
-t_end="20090731 000000"  # last output
+t_beg="20090101 000000"  # first output
+t_end="20100101 000000"  # last output
 dt="21600"               # output interval
-dtrs="86400"             # restart interval
+dtrs="432000"             # restart interval
 
 # restart run or not
 f_restart="no"
 # clean old exes and build new ones
-f_new="yes"
+f_new="no"
 # update grid
-f_grid="yes"
+f_grid="no"
 # input file options: core2update, core2copy, cice, none
 opt_input="cice"
 
 # number of processors
 nproc=64
 # wall time (hh:mm)
-walltime="01:00"
+walltime="12:00"
 # queue (small, regular, economy)
 queue="regular"
 # project number
@@ -152,11 +152,11 @@ if [[ ${f_grid} == yes ]]; then
 	path_grid="${toolbox_dir}/grids/grid_inp"
 	cp ${path_grid}/${gridtype}_bottom.inp ./
 	cp ${path_grid}/${gridtype}_mapsta.inp ./
-	if [ -f ${path_grid}/${grd}_x.inp ]; then
-		cp ${path_grid}/${grd}_x.inp ./
+	if [ -f ${path_grid}/${gridtype}_x.inp ]; then
+		cp ${path_grid}/${gridtype}_x.inp ./
 	fi
-	if [ -f ${path_grid}/${grd}_y.inp ]; then
-		cp ${path_grid}/${grd}_y.inp ./
+	if [ -f ${path_grid}/${gridtype}_y.inp ]; then
+		cp ${path_grid}/${gridtype}_y.inp ./
 	fi
 	cp ${path_grid}/ww3_grid.inp.${gridtype} ./ww3_grid.inp
 
@@ -164,11 +164,11 @@ if [[ ${f_grid} == yes ]]; then
 	${path_exe}/ww3_grid > ${path_out}/ww3_grid.out
 	mkdir -p grid_inp
 	mv ${gridtype}_bottom.inp ${gridtype}_mapsta.inp ww3_grid.inp ${path_work}/grid_inp
-	if [ -f ${grd}_x.inp ]; then
-		mv ${grd}_x.inp ${path_work}/grid_inp
+	if [ -f ${gridtype}_x.inp ]; then
+		mv ${gridtype}_x.inp ${path_work}/grid_inp
 	fi
-	if [ -f ${grd}_y.inp ]; then
-		mv ${grd}_y.inp ${path_work}/grid_inp
+	if [ -f ${gridtype}_y.inp ]; then
+		mv ${gridtype}_y.inp ${path_work}/grid_inp
 	fi
 
 fi
