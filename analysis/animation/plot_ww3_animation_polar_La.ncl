@@ -199,7 +199,7 @@ do ip=0,npl-1
 ; plot
 do it = 1, nt-1
 ;do it = 1, 1
-	it_str = sprinti("%03i", it)
+	it_str = sprinti("%04i", it)
 	if (mod(it, 10) .eq. 0) then
 		print("Step: "+it_str)
 	end if

@@ -9,8 +9,8 @@ begin
 
 ; define file names
 	gType   = "gx16b"
-	yyyymm  = "200901"
-	cName	= "testIce2_"+yyyymm+"_"+gType
+	yyyymm  = "2009"
+	cName	= "testIce_"+yyyymm+"_"+gType
 	nHost	= systemfunc("echo $HOSTNAME")
 	matchC	= str_match_ind_ic(nHost, "chace")
 	matchY	= str_match_ind_ic(nHost, "yslogin")
@@ -193,7 +193,7 @@ do ip=0,npl-1
 
 ; plot
 do it = 1, nt-1
-	it_str = sprinti("%03i", it)
+	it_str = sprinti("%04i", it)
 	if (mod(it, 10) .eq. 0) then
 		print("Step: "+it_str+"...")
 	end if
