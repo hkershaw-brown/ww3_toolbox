@@ -14,8 +14,8 @@ fi
 
 for f in *.ps; do
 	if [ -e $f ]; then
-		 rm -f ${f//ps/eps}
-		 ps2epsi $f ${f//ps/eps}
+		rm -f ${f//ps/eps}
+		ps2epsi $f ${f//ps/eps}
 	fi
 done
 

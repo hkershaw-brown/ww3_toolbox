@@ -12,8 +12,8 @@ begin
 
 ; define file names
 	gType   = "gx16b"
-	yyyymm  = "200907"
-	cName	= "testIce2_"+yyyymm+"_"+gType
+	yyyymm  = "2009"
+	cName	= "testIce_"+yyyymm+"_"+gType
 	nHost	= systemfunc("echo $HOSTNAME")
 	matchC	= str_match_ind_ic(nHost, "chace")
 	matchY	= str_match_ind_ic(nHost, "yslogin")
@@ -36,7 +36,7 @@ begin
 ; set variables
 	var	= "la"
 	minlv 	= 0.1
-	maxlv 	= 1.0
+	maxlv 	= 1.5
 	intlv	= 0.05
 	l_ice   = True ; plot 15% and 85% ice line
 

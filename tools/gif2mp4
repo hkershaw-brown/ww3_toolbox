@@ -1,0 +1,20 @@
+#!/bin/bash
+# This script uses ffmpeg to convert gif to mp4
+#
+# Qing Li, 20170725
+
+rf=12 # frame rate, set to a greater value to make the animation faster
+
+which ffmpeg
+if [ $? -ne 0 ]; then
+	echo "ffmpeg required, but not found. Please make sure it is installed."
+	exit 1
+fi
+
+for f in *.gif; do
+	if [ -e $f ]; then
+		rm -f ${f//gif/mp4}
+		echo "Converting ${f} to .mp4"
+		ffmpeg -r ${rf} -i $f ${f//gif/mp4}
+	fi
+done
