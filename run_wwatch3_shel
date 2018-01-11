@@ -12,21 +12,21 @@ source ./share/bash_functions.sh
 ## Run control ----------------------------------------------------------------
 # case name
 gridtype="gx16b"  # grid type: gx16 or gx37 or ww3a
-casename="TWW3_2009_${gridtype}"
+casename="test02_${gridtype}"
 
 # run times
 # (nonzero hhmmss not supported)
 t_beg="20090101 000000"  # first output
-t_end="20100101 000000"  # last output
+t_end="20090106 000000"  # last output
 dt="21600"               # output interval
 dtrs="432000"             # restart interval
 
 # restart run or not
 f_restart="no"
 # clean old exes and build new ones
-f_new="no"
+f_new="yes"
 # update grid
-f_grid="no"
+f_grid="yes"
 # input file options: core2update, core2copy, cice, none
 opt_input="cice"
 
@@ -45,9 +45,6 @@ case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
 case_switch_ser="${case_switch_base} SHRD"
 case_switch_mpi="${case_switch_base} MPI DIST"
 
-# specify compiler string (as per in ww3_dir/bin options) here:
-compstr="Intel"
-
 # set directory
 tmp_dir="/glade/scratch/qingli/wwatch3v5p16"
 toolbox_dir=${WW3_TOOLBOX_ROOT}
@@ -55,13 +52,17 @@ toolbox_dir=${WW3_TOOLBOX_ROOT}
 # set environment
 export WWATCH3_NETCDF="NC4"
 if [[ ${HOSTNAME} == yslogin* ]]; then
-	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16"
+	ww3_dir="${HOME}/wwatch3_v5.16"
 	projnum="UBRN0005"
 	export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
+    # specify compiler string (as per in ww3_dir/bin options) here:
+    compstr="Intel"
 elif [[ ${HOSTNAME} == cheyenne* ]]; then
-	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16_cheyenne"
+	ww3_dir="${HOME}/wwatch3_v5.16_cheyenne"
 	projnum="P93300612"
 	export NETCDF_CONFIG="/glade/u/apps/ch/opt/netcdf/4.4.1.1/intel/16.0.3/bin/nc-config"
+    # specify compiler string (as per in ww3_dir/bin options) here:
+    compstr="Cheyenne_Intel"
 else
 	echo "Machine ${HOSTNAME} not supported. Stop."
 	exit 1
@@ -112,6 +113,7 @@ path_out="${path_work}/out"        # output directory
 path_res="${path_work}/restart"    # restart directory
 path_exe="${path_work}/exe"        # directory executables for each case
 path_input="${tmp_dir}/data"       # input data directory for copy
+path_scpt="${toolbox_dir}/bin"     # path for compiler and linker scripts
 
 # setup work directory
 mkdir -p ${path_work}
@@ -125,8 +127,8 @@ mkdir -p ${path_out}
 mkdir -p ${path_res}
 
 # setup compiler and linker script
-cp ${path_b}/comp.${compstr} ${path_b}/comp
-cp ${path_b}/link.${compstr} ${path_b}/link
+cp ${path_scpt}/comp.${compstr} ${path_b}/comp
+cp ${path_scpt}/link.${compstr} ${path_b}/link
 
 # clean old files and create new case
 if [[ ${f_new} == yes ]]; then
