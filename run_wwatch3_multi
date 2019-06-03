@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # This script sets up and submits job of global WW3 simulation
 # using multiple grids on Yellowstone/Cheyenne.
@@ -51,31 +51,28 @@ walltime="01:00"
 # queue (small, regular, economy)
 queue="regular"
 # project number
-#projnum="UBRN0005"
+projnum="P93300612"
 
 # set switch
-case_switch_base="F90 NOGRB NOPA LRB4 NC4 SCRIP SCRIPNC PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
-"NL1 TR0 BS0 IC2 IS2 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
+#cici
+case_switch_base="F90 NOGRB NOPA LRB4 NC4 PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
+"NL1 TR0 BS0 REF0 IS0 IC4 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
+# qing 
+#case_switch_base="F90 NOGRB NOPA LRB4 NC4 SCRIP SCRIPNC PR3 UQ FLX0 LN1 ST4 BT1 DB1 MLIM "\
+#"NL1 TR0 BS0 IC2 IS2 REF0 XX0 WNT1 WNX1 CRT1 CRX1 O0 O1 O2 O3 O4 O5 O6 O7 O11"
 case_switch_ser="${case_switch_base} SHRD"
 case_switch_mpi="${case_switch_base} MPI DIST"
 
 
 # set directory
-tmp_dir="/glade/scratch/qingli/wwatch3v5p16"
+tmp_dir="/glade/scratch/hkershaw/wwatch3v6p07"
 toolbox_dir=${WW3_TOOLBOX_ROOT}
 
 # set environment
 export WWATCH3_NETCDF="NC4"
-if [[ ${HOSTNAME} == yslogin* ]]; then
-	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16"
-	projnum="UBRN0005"
-	export NETCDF_CONFIG="/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/bin/nc-config"
-    # specify compiler string (as per in ww3_dir/bin options) here:
-    compstr="Intel"
-elif [[ ${HOSTNAME} == cheyenne* ]]; then
-	ww3_dir="/glade/u/home/qingli/wwatch3_v5.16_cheyenne"
-	projnum="P93300612"
-	export NETCDF_CONFIG="/glade/u/apps/ch/opt/netcdf/4.4.1.1/intel/16.0.3/bin/nc-config"
+if [[ ${HOSTNAME} == cheyenne* ]]; then
+	ww3_dir="/glade/u/home/hkershaw/WW3/WW3-6.07.1/model"
+	export NETCDF_CONFIG="/glade/u/apps/ch/opt/netcdf/4.6.1/intel/17.0.1/bin/nc-config"
     # specify compiler string (as per in ww3_dir/bin options) here:
     compstr="Cheyenne_Intel"
 else
@@ -157,7 +154,6 @@ if [[ ${f_grid} == yes ]]; then
 	# check error
 	check_error "Error in compiling ww3_grid. Stop..."
 	cp ${path_e}/ww3_grid ${path_exe}/
-
 	rm -f mod_def.*
 	path_grid="${toolbox_dir}/grids/grid_inp"
 	mkdir -p grid_inp
@@ -188,7 +184,6 @@ if [[ ${f_grid} == yes ]]; then
 	fi
 	done
 fi
-
 
 ## 2. Initial conditions ------------------------------------------------------
 print_title "Initial conditions"
@@ -396,7 +391,6 @@ mkdir -p ounf_inp
 nnn_res=`printf %03d ${nres}`
 sav_res="restart${nnn_res}.ww3"
 rname_res="restart_${date_end}.ww3"
-
 
 ## 7. Submitting job ----------------------------------------------------------
 print_title "Submitting job"
