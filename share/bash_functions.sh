@@ -36,3 +36,21 @@ find_replace () {
 	fi
 }
 
+function GetDayOfYear ()
+{
+# never ask for leap day so mar 1 is always day 60 and all years are 365 days long
+  month=$1
+  day=$2
+
+# arrays are indexed from 0, lastday is last day of previous month
+# hence lastday[1]=0 is last day of December
+# hence lastday[2]=31 is last day of January
+  lastday=(0 0 31 59 90 120 151 181 212 243 273 304 334 365)
+
+  jd=$((${lastday[(($month))]}+$day));
+
+  echo $jd
+}
+
+
+

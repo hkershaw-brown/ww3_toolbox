@@ -30,7 +30,6 @@ $ Start of namelist input section ------------------------------------ $
 $
 
   &SIN2 ZWND = 0 /
-  &SIS2 IS2DUPDATE = .FALSE. /
   &SIC4 IC4METHOD = 3 /
   &OUTS E3D = 1 /
 
