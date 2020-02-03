@@ -5,6 +5,8 @@ This is a tool box for submitting WW3 jobs on Yellowstone and Cheyenne and Oscar
 
 ## Step 0: Create grid_inp_file
 
+ source ww3_grids/bin/activate
+ grids/create_netcdf.sh
 
 ## Step 1: Prepare grid
 

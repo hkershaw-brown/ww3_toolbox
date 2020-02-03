@@ -4,7 +4,7 @@
 #
 
 pop_grid='ts.woa2013v2_0.25.ic.POP_tx0.1v3_62lev.20170825.nc'
-ww3_grid_file='tx0.1v3.nc'
+ww3_grid_file='tx0.1v3.grids.nc'
 
 rm temp.nc temp_double.nc $ww3_grid_file
 
