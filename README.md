@@ -8,6 +8,8 @@ This is a tool box for submitting WW3 jobs on Yellowstone and Cheyenne and Oscar
  source ww3_grids/bin/activate
  grids/create_netcdf.sh
 
+Note the tx0.1v3 grid files are too big to push to git hub
+
 ## Step 1: Prepare grid
 
 Tools for generating grid and preparing for the input file are located in the folder `grids/`.
