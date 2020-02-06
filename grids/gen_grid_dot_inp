@@ -10,12 +10,12 @@ def main():
     """
     """
     # check input
-    gridlist = ('gx37', 'gx16')
-    gstrg = {'gx37': 'CURV', 'gx16': 'CURV'}
-    flagll = {'gx37': 'T', 'gx16': 'T'}
-    cstrg = {'gx37': 'SMPL', 'gx16': 'SMPL'}
-    nx = {'gx37': 100, 'gx16': 320}
-    ny = {'gx37': 116, 'gx16': 384}
+    gridlist = ('gx37', 'gx16', 'gx17', 'tx0.1v3')
+    gstrg = {'gx37': 'CURV', 'gx16': 'CURV', 'gx17': 'CURV', 'tx0.1v3': 'CURV' }
+    flagll = {'gx37': 'T', 'gx16': 'T', 'gx17': 'T','tx0.1v3': 'T' }
+    cstrg = {'gx37': 'SMPL', 'gx16': 'SMPL', 'gx17': 'SMPL', 'tx0.1v3': 'SMPL'}
+    nx = {'gx37': 100, 'gx16': 320, 'gx17': 320, 'tx0.1v3': 3600}
+    ny = {'gx37': 116, 'gx16': 384, 'gx17': 384, 'tx0.1v3': 2400}
     varargin = sys.argv
     narg = len(varargin)
     if narg != 2:
