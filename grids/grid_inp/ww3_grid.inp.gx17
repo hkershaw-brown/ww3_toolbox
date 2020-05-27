@@ -28,16 +28,21 @@ $
 $
 $ Start of namelist input section ------------------------------------ $
 $
+
+  &SIN2 ZWND = 0 /
+  &SIC4 IC4METHOD = 3 /
+  &OUTS E3D = 1 /
+
 END OF NAMELISTS
 $
 $ Define grid -------------------------------------------------------- $
 $
   'CURV'  T  'SMPL'
   320  384
-  21 1.0 0.0 1 1 '(....)' 'NAME' 'gx16_x.inp'
-  22 1.0 0.0 1 1 '(....)' 'NAME' 'gx16_y.inp'
-  -0.1 2.50 23 -1. 1 1 '(....)' 'NAME' 'gx16_bottom.inp'
-  24 1 1 '(....)' 'NAME' 'gx16_mapsta.inp'
+  21 1.0 0.0 1 1 '(....)' 'NAME' 'gx17_x.inp'
+  22 1.0 0.0 1 1 '(....)' 'NAME' 'gx17_y.inp'
+  -0.1 2.50 23 -1. 1 1 '(....)' 'NAME' 'gx17_bottom.inp'
+  24 1 1 '(....)' 'NAME' 'gx17_mapsta.inp'
 $
 $  Close list by defining line with 0 points (mandatory)
 $
