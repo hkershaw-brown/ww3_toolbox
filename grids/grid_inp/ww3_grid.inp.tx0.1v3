@@ -24,14 +24,14 @@ $ - Time step information (this information is always read)
 $     maximum global time step, maximum CFL time step for x-y and
 $     k-theta, minimum source term time step (all in seconds).
 $
-  1800.00  450.00  900.00   15.00
+  1800.00  1800.00  1800.00   300.00
 $
 $ Start of namelist input section ------------------------------------ $
 $
 
-  &SIN2 ZWND = 0 /
-  &SIC4 IC4METHOD = 3 /
-  &OUTS E3D = 1 /
+  &SIN2 ZWND = 0 / 
+  &SIC4 IC4METHOD = 3 / 
+  &OUTS E3D = 1 / 
 
 END OF NAMELISTS
 $
@@ -39,6 +39,14 @@ $ Define grid -------------------------------------------------------- $
 $
   'CURV'  T  'SMPL'
   3600  2400
+  21 1.0 0.0 1 1 '(....)' 'NAME' 'tx0.1v3_x.inp'
+  22 1.0 0.0 1 1 '(....)' 'NAME' 'tx0.1v3_y.inp'
+  -0.1 2.50 23 -1. 1 1 '(....)' 'NAME' 'tx0.1v3_bottom.inp'
+  24 1 1 '(....)' 'NAME' 'tx0.1v3_mapsta.inp'
+$
+$  Close list by defining line with 0 points (mandatory)
+$
+    0.  0.  0.  0.  0
 $
 $ -------------------------------------------------------------------- $
 $ End of input file                                                    $
